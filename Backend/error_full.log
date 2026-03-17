@@ -1,0 +1,8 @@
+﻿[dotenv@17.3.1] injecting env (17) from .env -- tip: ΓÜí∩╕Å secrets for agents: https://dotenvx.com/as2
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+Executing (default): SELECT 1+1 AS result
+Database connected.
+Executing (default): SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME = 'organizations' AND TABLE_SCHEMA = 'NewExampro'
+Executing (default): SHOW FULL COLUMNS FROM `organizations`;
+Executing (default): SELECT CONSTRAINT_NAME as constraint_name,CONSTRAINT_NAME as constraintName,CONSTRAINT_SCHEMA as constraintSchema,CONSTRAINT_SCHEMA as constraintCatalog,TABLE_NAME as tableName,TABLE_SCHEMA as tableSchema,TABLE_SCHEMA as tableCatalog,COLUMN_NAME as columnName,REFERENCED_TABLE_SCHEMA as referencedTableSchema,REFERENCED_TABLE_SCHEMA as referencedTableCatalog,REFERENCED_TABLE_NAME as referencedTableName,REFERENCED_COLUMN_NAME as referencedColumnName FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = 'organizations' AND CONSTRAINT_NAME!='PRIMARY' AND CONSTRAINT_SCHEMA='NewExampro' AND REFERENCED_TABLE_NAME IS NOT NULL;
+Executing (default): ALTER TABLE `organizations` CHANGE `name` `name` VARCHAR(255) NOT NULL;
