@@ -143,7 +143,7 @@ const StagingQuestion = () => {
       {/* TABLE */}
       <div className="overflow-x-auto bg-white border rounded-lg">
         <table className="w-full text-sm">
-          <thead className="bg-orange-200">
+          <thead className="bg-slate-100">
             <tr>
               {["Sr", "Exam", "Groups", "Total Questions", "Created By", "Created At", "Updated At", "Actions",].map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-gray-700">

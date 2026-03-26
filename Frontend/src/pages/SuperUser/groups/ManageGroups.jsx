@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { fetchGroups, updateGroup, deleteGroup } from "../../../utils/api";
+import { fetchSuperUserGroups, updateGroup, deleteSuperUserGroup } from "../../../utils/api";
 import { toast } from "react-hot-toast";
 import {
   Users,
@@ -37,8 +36,7 @@ export default function ManageGroups() {
   const loadGroups = async () => {
     setLoading(true);
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      const data = await fetchGroups(user.organizationId);
+      const data = await fetchSuperUserGroups();
 
       const normalized = data.map((g) => ({
         id: g.id,
@@ -101,7 +99,7 @@ export default function ManageGroups() {
   const handleDelete = async (groupId) => {
     if (!window.confirm("Confirm unit decommission sequence?")) return;
     try {
-      await deleteGroup(groupId);
+      await deleteSuperUserGroup(groupId);
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
       toast.success("Unit decommissioned successfully");
     } catch (err) {
@@ -125,17 +123,17 @@ export default function ManageGroups() {
     <div className="space-y-8 animate-in fade-in duration-500 text-left">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Personnel Unit Registry</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Institutional hierarchy management</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Groups</h2>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">Manage organization units and participants.</p>
         </div>
         <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-100 focus-within:bg-white focus-within:border-indigo-100 transition-all w-full md:w-80 shadow-inner">
           <Search size={16} className="text-slate-400" />
           <input
             type="text"
-            placeholder="Search unit registry..."
+            placeholder="Search groups..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest placeholder:text-slate-300 w-full font-sans"
+            className="bg-transparent border-none outline-none text-[10px] font-bold placeholder:text-slate-300 w-full font-sans"
           />
         </div>
       </div>
@@ -144,12 +142,12 @@ export default function ManageGroups() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Unit Specification</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Entities</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Temporal Range</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created Entity</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Operations</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Group Details</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Participants</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Duration</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Status</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Created By</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -189,18 +187,18 @@ export default function ManageGroups() {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 tracking-tight">
                         <Calendar size={12} className="text-slate-300" />
                         <span>{g.start || "N/A"}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 tracking-tight">
                         <Clock size={12} className="text-slate-300" />
                         <span>{g.end || "N/A"}</span>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${g.status === "Active"
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black tracking-widest border ${g.status === "Active"
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                         : "bg-red-50 text-red-600 border-red-100"
                       }`}>
@@ -210,7 +208,7 @@ export default function ManageGroups() {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
-                      <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">{g.createdBy}</p>
+                      <p className="text-[10px] font-bold text-slate-900 tracking-wide">{g.createdBy}</p>
                       <p className="text-[8px] font-bold text-slate-300 mt-0.5">{new Date(g.createdAt).toLocaleDateString()}</p>
                     </div>
                   </td>
@@ -254,69 +252,69 @@ export default function ManageGroups() {
               className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden"
             >
               <div className="p-10 border-b border-slate-50">
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight italic">Edit Unit Protocol</h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Institutional parameter adjustment</p>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Group</h2>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">Adjust group parameters.</p>
               </div>
 
               <div className="p-10 space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-1.5 font-left">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Unit Identification</label>
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Group Name</label>
                     <input
                       type="text"
                       name="name"
                       value={editForm.name}
                       onChange={handleEditChange}
-                      placeholder="Unit Name"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all"
+                      placeholder="Group Name"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Module Specification</label>
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Description</label>
                     <textarea
                       name="description"
                       value={editForm.description}
                       onChange={handleEditChange}
-                      placeholder="Functional Description"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all min-h-[100px]"
+                      placeholder="Enter description..."
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all min-h-[100px]"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Start Sequence</label>
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">Start Date</label>
                       <input
                         type="date"
                         name="startDate"
                         value={editForm.startDate}
                         onChange={handleEditChange}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all"
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Termination</label>
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">End Date</label>
                       <input
                         type="date"
                         name="endDate"
                         value={editForm.endDate}
                         onChange={handleEditChange}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all"
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Operational Status</label>
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Operational Status</label>
                     <select
                       name="status"
                       value={editForm.status}
                       onChange={handleEditChange}
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all appearance-none cursor-pointer"
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all appearance-none cursor-pointer"
                     >
-                      <option value="Active">Operational (Active)</option>
-                      <option value="Inactive">Suspended (Inactive)</option>
-                      <option value="Closed">Decommissioned (Closed)</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Closed">Closed</option>
                     </select>
                   </div>
                 </div>
@@ -324,15 +322,15 @@ export default function ManageGroups() {
                 <div className="flex gap-4 pt-4">
                   <button
                     onClick={() => setEditingGroup(null)}
-                    className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-100"
+                    className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 hover:bg-slate-100 transition-all border border-slate-100"
                   >
-                    Abort
+                    Cancel
                   </button>
                   <button
                     onClick={handleSaveEdit}
-                    className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-slate-100"
+                    className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 hover:bg-black transition-all shadow-xl shadow-slate-100"
                   >
-                    Commit Changes
+                    Save Changes
                   </button>
                 </div>
               </div>

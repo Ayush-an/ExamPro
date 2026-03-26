@@ -100,19 +100,19 @@ const ManageQuestion = () => {
     <div className="space-y-8 animate-in fade-in duration-500 text-left">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-50">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Intelligence Node Repository</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Management of assessment intelligence units</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Questions</h2>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">Manage exam questions and bank.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-3 bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 min-w-[240px] shadow-inner">
             <Filter size={16} className="text-slate-400" />
             <select
-              className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest w-full cursor-pointer"
+              className="bg-transparent border-none outline-none text-[10px] font-bold w-full cursor-pointer"
               value={examId}
               onChange={(e) => { setExamId(e.target.value); loadQuestions(e.target.value); }}
             >
-              <option value="">Target Protocol</option>
+              <option value="">Select Exam</option>
               {exams.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
             </select>
           </div>
@@ -121,16 +121,16 @@ const ManageQuestion = () => {
             <Search size={16} className="text-slate-400" />
             <input
               type="text"
-              placeholder="Search intelligence matrix..."
+              placeholder="Search questions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest placeholder:text-slate-300 w-full"
+              className="bg-transparent border-none outline-none text-[10px] font-bold placeholder:text-slate-300 w-full"
             />
           </div>
 
           <button
             onClick={downloadExcel}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-bold hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
           >
             <Download size={14} /> Export Bank
           </button>
@@ -141,11 +141,11 @@ const ManageQuestion = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sr.</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Intelligence Unit</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Protocol Reference</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Classification</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">No.</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Question</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Exam</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Difficulty</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -154,7 +154,7 @@ const ManageQuestion = () => {
                 <td colSpan="5" className="px-8 py-20 text-center">
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Synchronizing Intelligence Stream...</p>
+                    <p className="text-[10px] font-bold text-slate-400">Loading Questions...</p>
                   </div>
                 </td>
               </tr>
@@ -163,7 +163,7 @@ const ManageQuestion = () => {
                 <td colSpan="5" className="px-8 py-20 text-center text-gray-500">
                   <div className="flex flex-col items-center gap-4 opacity-20">
                     <HelpCircle size={48} className="text-slate-400" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Matrix Empty: Select Protocol</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em]">No questions found for this exam</p>
                   </div>
                 </td>
               </tr>
@@ -181,19 +181,19 @@ const ManageQuestion = () => {
                       <div>
                         <p className="text-sm font-extrabold text-slate-900 tracking-tight line-clamp-2 leading-relaxed mb-2">{q.question_text}</p>
                         <div className="flex gap-2">
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[8px] font-black uppercase tracking-widest border border-emerald-100">KEY: OP{q.correct_option}</span>
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-400 rounded-md text-[8px] font-black uppercase tracking-widest border border-slate-100">BATCH: {q.uploadBatchCode || "INST"}</span>
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[8px] font-black tracking-widest border border-emerald-100">Correct: Option {q.correct_option}</span>
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-400 rounded-md text-[8px] font-black tracking-widest border border-slate-100">Batch: {q.uploadBatchCode || "INST"}</span>
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <span className="inline-flex px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100">
+                    <span className="inline-flex px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black tracking-widest border border-indigo-100">
                       {exams.find((e) => e.id === q.examId)?.title || "ORPHANED"}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${q.difficulty === "EASY"
+                    <span className={`inline-flex px-3 py-1 rounded-full text-[8px] font-black tracking-widest border ${q.difficulty === "EASY"
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                         : q.difficulty === "MEDIUM"
                           ? "bg-amber-50 text-amber-600 border-amber-100"

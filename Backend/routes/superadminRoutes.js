@@ -17,5 +17,6 @@ router.delete('/plans/:id', superadminController.deletePlan);
 // ─── New routes ───────────────────────────────────────────────────────────────
 router.get('/admins', superadminController.getAdmins);
 router.get('/stats', superadminController.getSuperadminStats);
+router.get('/list/:type', superadminController.getListByType);
 
 module.exports = router;

@@ -36,11 +36,11 @@ export default function RemoveGroup() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Group Name</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Description</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Removed On</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              <tr className="bg-slate-50/50 border-b border-slate-300">
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Group Details</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Description</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Removal Info</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -58,13 +58,14 @@ export default function RemoveGroup() {
                   <tr key={g.id} className="border-b border-slate-50 last:border-none hover:bg-slate-50/50 transition duration-150">
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-800">{g.name}</div>
-                      <div className="text-xs text-slate-400 mt-1">Status: Archived</div>
+                      <div className="text-xs font-medium text-slate-400 mt-1">Created: {g.createdAt ? new Date(g.createdAt).toLocaleDateString() : "N/A"}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 max-w-[200px] truncate" title={g.description}>
                       {g.description || "No description provided"}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 font-medium">
-                      {g.updatedAt ? new Date(g.updatedAt).toLocaleDateString() : 'N/A'}
+                    <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-slate-700">Removed: {g.updatedAt ? new Date(g.updatedAt).toLocaleDateString() : 'N/A'}</div>
+                        <div className="text-xs font-medium text-slate-400 mt-1">By: {g.createdBy || 'Unknown'}</div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center justify-center ml-auto gap-2">

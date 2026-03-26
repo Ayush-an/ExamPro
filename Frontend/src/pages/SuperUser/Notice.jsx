@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { fetchGroups, sendNotice } from "../../utils/api";
+import { fetchSuperUserGroups, sendSuperUserNotice } from "../../utils/api";
 import {
   BellRing,
   Send,
@@ -30,7 +29,7 @@ export default function Notice({ onClose }) {
   useEffect(() => {
     const loadGroups = async () => {
       try {
-        const allGroups = await fetchGroups();
+        const allGroups = await fetchSuperUserGroups();
         setGroups(allGroups.groups || allGroups || []);
       } catch (err) {
         toast.error("Functional unit synchronization failure");
@@ -59,7 +58,7 @@ export default function Notice({ onClose }) {
       if (file) formData.append("file", file);
       formData.append("groups", JSON.stringify(selectedGroups));
 
-      await sendNotice(formData);
+      await sendSuperUserNotice(formData);
       toast.success("Notice broadcasted successfully!");
       if (onClose) onClose();
     } catch (err) {
@@ -156,7 +155,7 @@ export default function Notice({ onClose }) {
 
         <div className="flex gap-4 pt-4 sticky bottom-0 bg-white py-4">
           <button type="button" onClick={onClose} className="px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-100">Abort Broadcast</button>
-          <button type="submit" disabled={loading} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-indigo-50/50 flex items-center justify-center gap-3">
+          <button type="submit" disabled={loading} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-indigo-50/50 flex items-center justify-center gap-3">
             <Megaphone size={16} /> {loading ? 'Broadcasting...' : 'Execute Broadcast'}
           </button>
         </div>

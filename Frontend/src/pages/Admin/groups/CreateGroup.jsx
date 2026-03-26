@@ -62,21 +62,21 @@ export default function CreateGroup({ onClose }) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Group Name</label>
+          <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1.5">Group Name</label>
           <input
             type="text"
             name="name"
-            placeholder="e.g. Fall 2026 Cohort"
+            placeholder="e.g. MCA, BCA other etc"
             onChange={handleChange}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-800 placeholder-slate-400"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Description (Optional)</label>
+          <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1.5">Description (Optional)</label>
           <textarea
             name="description"
-            placeholder="Brief overview of this group..."
+            placeholder="1st year, 2nd year etc."
             onChange={handleChange}
             className="w-full h-24 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-800 placeholder-slate-400 resize-none"
           />
@@ -84,7 +84,7 @@ export default function CreateGroup({ onClose }) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Start Date</label>
+            <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1.5">Start Date</label>
             <input
               type="date"
               name="startDate"

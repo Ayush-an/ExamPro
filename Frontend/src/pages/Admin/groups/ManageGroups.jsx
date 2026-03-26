@@ -112,13 +112,13 @@ export default function ManageGroups() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Group Name</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Description</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Members</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Duration</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              <tr className="bg-slate-50/50 border-b border-slate-300">
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Group Name</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Description</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Members</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Duration</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest text-right">Actions</th>
               </tr>
             </thead>
 
@@ -154,7 +154,7 @@ export default function ManageGroups() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${g.status === "Active" ? "bg-emerald-50 text-emerald-600" :
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold tracking-widest ${g.status === "Active" ? "bg-emerald-50 text-emerald-600" :
                         g.status === "Closed" ? "bg-slate-100 text-slate-500" :
                           "bg-rose-50 text-rose-600"
                         }`}>
@@ -179,7 +179,7 @@ export default function ManageGroups() {
 
       {/* Edit Modal */}
       {editingGroup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm pt-30">
           <div className="bg-white rounded-[32px] p-8 w-[480px] shadow-2xl relative">
             <button onClick={() => setEditingGroup(null)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
               <X className="w-5 h-5" />
@@ -189,28 +189,28 @@ export default function ManageGroups() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Group Name</label>
+                <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1">Group Name</label>
                 <input type="text" name="name" value={editForm.name} onChange={handleEditChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-800" />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Description</label>
+                <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1">Description</label>
                 <textarea name="description" value={editForm.description} onChange={handleEditChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-800 resize-none h-24" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Start Date</label>
+                  <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1">Start Date</label>
                   <input type="date" name="startDate" value={editForm.startDate?.split('T')[0] || ''} onChange={handleEditChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-500" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">End Date</label>
+                  <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1">End Date</label>
                   <input type="date" name="endDate" value={editForm.endDate?.split('T')[0] || ''} onChange={handleEditChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-500" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Status</label>
+                <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1">Status</label>
                 <select name="status" value={editForm.status} onChange={handleEditChange} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-medium text-slate-800 appearance-none">
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>

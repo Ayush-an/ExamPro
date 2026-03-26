@@ -1,6 +1,6 @@
 //AdminDashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { User, Bell, LogOut, Menu, ChevronDown, LayoutDashboard, Users, GraduationCap, FileText, Send, MessageSquare, Plus, Search, CheckCircle2 } from "lucide-react";
+import { User, Bell, LogOut, Menu, ChevronDown, LayoutDashboard, Users, GraduationCap, FileText, Send, MessageSquare, Newspaper, Plus, Search, CheckCircle2, Layers, Hash } from "lucide-react";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
 import { Fragment } from "react";
@@ -21,8 +21,6 @@ import RemoveGroup from "./groups/RemoveGroup.jsx";
 import ManageParticipants from "./participant/ManageParticipant.jsx";
 import RemoveParticipant from "./participant/RemoveParticipant.jsx";
 import StagingParticipant from "./participant/StagingParticipant.jsx";
-import ActiveParticipant from "./participant/ActiveParticipant.jsx";
-import ParticipantSummary from "./participant/ParticipantSummary.jsx";
 import ParticipantHistory from "./participant/ParticipantHistory.jsx";
 
 import ManageExams from "./exam/ManageExam.jsx";
@@ -30,11 +28,16 @@ import RemoveExam from "./exam/RemoveExam.jsx";
 
 import ManageQuestion from "./question/ManageQuestion";
 import StagingQuestion from "./question/StagingQuestion.jsx";
-import QuestionSummary from "./question/QuestionSummary.jsx";
 import QuestionHistory from "./question/QuestionHistory.jsx";
+import ManageCategories from "./categoryTopic/ManageCategories.jsx";
+import RemoveCategory from "./categoryTopic/RemoveCategory.jsx";
+import ManageTopics from "./categoryTopic/ManageTopics.jsx";
+import RemoveTopic from "./categoryTopic/RemoveTopic.jsx";
 import SendNotice from "./components/SendNotice.jsx";
+import SendAssignment from "./Assignment.jsx";
 import SendFeedback from "./components/SendFeedback.jsx";
 import StatsListPopup from "./common/StatsListPopup.jsx";
+import AdminProfilePopup from "./components/AdminProfilePopup.jsx";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -46,11 +49,18 @@ const AdminDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [stats, setStats] = useState({
     totalGroups: 0,
+    activeGroups: 0,
     totalParticipants: 0,
+    activeParticipants: 0,
     totalSuperUsers: 0,
+    activeSuperUsers: 0,
     totalExams: 0,
-    ActiveExams: 0,
-    InactiveExams: 0,
+    activeExams: 0,
+    upcomingExams: 0,
+    completedExams: 0,
+    totalCategories: 0,
+    totalTopics: 0,
+    totalQuestions: 0,
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -99,14 +109,12 @@ const AdminDashboard = () => {
     },
     {
       name: "Participant", icon: GraduationCap,
-      children: ["Create Participant", "Active Participant", "Manage Participant", "Remove Participant", "Staging Participant", "Upload Summary", "Participant History"],
+      children: ["Create Participant", "Manage Participant", "Remove Participant", "Staging Participant", "Participant History"],
       onClick: (action) => {
         if (action === "Create Participant") openPopup(<CreateParticipant onSuccess={() => setRefreshKey(k => k + 1)} />);
-        else if (action === "Active Participant") setActiveComponent(<ActiveParticipant />);
         else if (action === "Manage Participant") setActiveComponent(<ManageParticipants />);
         else if (action === "Remove Participant") setActiveComponent(<RemoveParticipant />);
         else if (action === "Staging Participant") setActiveComponent(<StagingParticipant />);
-        else if (action === "Upload Summary") setActiveComponent(<ParticipantSummary />);
         else if (action === "Participant History") setActiveComponent(<ParticipantHistory />);
       },
     },
@@ -120,13 +128,28 @@ const AdminDashboard = () => {
       },
     },
     {
+      name: "Categories", icon: Layers,
+      children: ["Manage Categories", "Remove Category"],
+      onClick: (action) => {
+        if (action === "Manage Categories") setActiveComponent(<ManageCategories />);
+        else if (action === "Remove Category") setActiveComponent(<RemoveCategory />);
+      },
+    },
+    {
+      name: "Topics", icon: Hash,
+      children: ["Manage Topics", "Remove Topic"],
+      onClick: (action) => {
+        if (action === "Manage Topics") setActiveComponent(<ManageTopics />);
+        else if (action === "Remove Topic") setActiveComponent(<RemoveTopic />);
+      },
+    },
+    {
       name: "Questions", icon: Plus,
-      children: ["Create Questions", "Manage Questions", "Staging Questions", "Question Summary", "Question History"],
+      children: ["Create Questions", "Manage Questions", "Staging Questions", "Question History"],
       onClick: (action) => {
         if (action === "Create Questions") openPopup(<CreateQuestion onSuccess={() => setRefreshKey(k => k + 1)} />);
         else if (action === "Manage Questions") setActiveComponent(<ManageQuestion />);
         else if (action === "Staging Questions") setActiveComponent(<StagingQuestion />);
-        else if (action === "Question Summary") setActiveComponent(<QuestionSummary />);
         else if (action === "Question History") setActiveComponent(<QuestionHistory />);
       },
     },
@@ -138,7 +161,8 @@ const AdminDashboard = () => {
       },
     },
     { name: "Notice", icon: Send, children: ["Send Notice"], onClick: (action) => action === "Send Notice" && openPopup(<SendNotice />) },
-    { name: "Feedback", icon: MessageSquare, children: ["Send Feedback"], onClick: (action) => action === "Send Feedback" && openPopup(<SendFeedback />) },
+    { name: "Assignment", icon: Newspaper, children: ["Send Assignment"], onClick: (action) => action === "Send Assignment" && openPopup(<SendAssignment />) },
+
   ];
 
   return (
@@ -167,6 +191,22 @@ const AdminDashboard = () => {
           {/* RIGHT SIDE */}
           <div className="flex items-center gap-4">
 
+
+            {/* Search */}
+            <button className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+              <Search size={18} />
+            </button>
+
+
+            {/* Feedback */}
+            <button
+              onClick={() => openPopup(<SendFeedback />)}
+              className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
+            >
+              <MessageSquare size={18} />
+            </button>
+
+
             {/* Notification */}
             <button className="relative p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
               <Bell size={18} />
@@ -187,18 +227,21 @@ const AdminDashboard = () => {
             <div className="h-6 w-px bg-slate-200"></div>
 
             {/* Profile */}
-            <div className="flex items-center gap-3 group cursor-pointer">
+            <div
+              className="flex items-center gap-3 group cursor-pointer"
+              onClick={() => openPopup(<AdminProfilePopup user={user} onClose={closePopup} />)}
+            >
               <div className="text-right">
                 <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition">
-                  {user?.name || "Admin"}
+                  {user?.full_name || user?.name || "Admin"}
                 </span>
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Organization Admin
+                  {user?.Organization?.name || "Organization Admin"}
                 </span>
               </div>
 
               <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold">
-                {user?.name?.charAt(0) || "A"}
+                {user?.full_name?.charAt(0) || user?.name?.charAt(0) || "A"}
               </div>
             </div>
           </div>
@@ -270,19 +313,35 @@ const AdminDashboard = () => {
         ) : (
           <div className="space-y-12">
             {/* Hero Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {[
                 { label: "Total Participants", value: stats.totalParticipants, color: "indigo", icon: GraduationCap },
+                { label: "Active Participants", value: stats.activeParticipants, color: "emerald", icon: CheckCircle2 },
                 { label: "Total Groups", value: stats.totalGroups, color: "slate", icon: Users },
+                { label: "Active Groups", value: stats.activeGroups, color: "emerald", icon: Users },
                 { label: "Total Exams", value: stats.totalExams, color: "slate", icon: FileText },
-                { label: "Active Exams", value: stats.ActiveExams, color: "emerald", icon: CheckCircle2 },
+                { label: "Active Exams", value: stats.activeExams, color: "emerald", icon: CheckCircle2 },
+                { label: "Upcoming Exams", value: stats.upcomingExams, color: "amber", icon: FileText },
+                { label: "Completed Exams", value: stats.completedExams, color: "slate", icon: FileText },
+                { label: "Total Categories", value: stats.totalCategories, color: "slate", icon: Layers },
+                { label: "Total Topics", value: stats.totalTopics, color: "slate", icon: Hash },
+                { label: "Total Questions", value: stats.totalQuestions, color: "indigo", icon: Plus },
+                { label: "Total Super Users", value: stats.totalSuperUsers, color: "slate", icon: User },
+                { label: "Active Super Users", value: stats.activeSuperUsers, color: "emerald", icon: User },
               ].map((stat, idx) => (
-                <div key={idx} className="group relative p-8 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-xl hover:shadow-indigo-50 transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => stat.label.includes("Participant") ? setActiveComponent(<ManageParticipants />) : null}>
+                <div key={idx} className="group relative p-8 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-xl hover:shadow-indigo-50 transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => {
+                  if (stat.label.includes("Participant")) setActiveComponent(<ManageParticipants />);
+                  else if (stat.label.includes("Group")) setActiveComponent(<ManageGroups />);
+                  else if (stat.label.includes("Exam")) setActiveComponent(<ManageExams />);
+                  else if (stat.label.includes("Category")) setActiveComponent(<ManageCategories />);
+                  else if (stat.label.includes("Topic")) setActiveComponent(<ManageTopics />);
+                  else if (stat.label.includes("Question")) setActiveComponent(<ManageQuestion />);
+                }}>
                   <div className="flex flex-col gap-1 relative z-10">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
-                    <h1 className={`text-4xl font-extrabold ${stat.color === 'emerald' ? 'text-emerald-600' : 'text-slate-800'} group-hover:text-indigo-600 transition tracking-tighter`}>{(stat.value ?? 0).toLocaleString()}</h1>
+                    <h1 className={`text-4xl font-extrabold ${stat.color === 'emerald' ? 'text-emerald-600' : stat.color === 'amber' ? 'text-amber-600' : 'text-slate-800'} group-hover:text-indigo-600 transition tracking-tighter`}>{(stat.value ?? 0).toLocaleString()}</h1>
                   </div>
-                  <div className={`absolute top-8 right-8 w-12 h-12 ${stat.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'} rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition duration-300`}>
+                  <div className={`absolute top-8 right-8 w-12 h-12 ${stat.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : stat.color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'} rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition duration-300`}>
                     {stat.icon && <stat.icon size={24} />}
                   </div>
                   <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-indigo-50 rounded-full opacity-0 group-hover:opacity-100 transition duration-500 scale-0 group-hover:scale-100"></div>
@@ -343,15 +402,15 @@ const AdminDashboard = () => {
 
       {/* Popup Backdrop */}
       <Transition show={!!popupComponent} as={Fragment}>
-        <Dialog as="div" className="relative z-[100]" onClose={closePopup}>
+        <Dialog as="div" className="relative z-50" onClose={closePopup}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" />
           </Transition.Child>
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-[40px] bg-white p-12 text-left align-middle shadow-2xl transition-all border border-slate-50 relative">
-                  <button onClick={closePopup} className="absolute top-8 right-8 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">✖</button>
+                <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-[32px] bg-white p-10 text-left align-middle shadow-2xl transition-all border border-slate-50 relative">
+                  <button onClick={closePopup} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">✖</button>
                   <div className="mt-2">
                     {React.isValidElement(popupComponent) ? React.cloneElement(popupComponent, { onClose: closePopup, onSuccess: () => { setRefreshKey(k => k + 1); closePopup(); } }) : popupComponent}
                   </div>

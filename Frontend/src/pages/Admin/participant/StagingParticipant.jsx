@@ -214,7 +214,7 @@ export default function StagingParticipant() {
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 {["#", "File Code", "File Name", "Batch", "Group", "Name", "Email", "Mobile", "Status", "Issues", "Created", "Actions"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-bold text-slate-400  tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>

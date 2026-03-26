@@ -1,42 +1,17 @@
+// SuperuserDashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
 import {
-  User,
-  Bell,
-  LogOut,
-  Menu,
-  ChevronDown,
-  LayoutDashboard,
-  Users,
-  BookOpen,
-  FileText,
-  MessageSquare,
-  BellRing,
-  Settings,
-  Search,
-  Plus,
-  BarChart3,
-  Calendar,
-  Clock,
-  Layers,
-  MoreVertical,
-  X,
-  Send,
-  HelpCircle,
-  ChevronRight
+  User, Bell, LogOut, Menu, ChevronDown, LayoutDashboard, Users, BookOpen, FileText,
+  MessageSquare, BellRing, Settings, Search, Plus, BarChart3, Calendar, Clock, Layers, MoreVertical, X, Send, HelpCircle, ChevronRight
 } from "lucide-react";
 import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, } from "chart.js";
 
 import { useNavigate } from "react-router-dom";
-import { fetchDashboardStats, fetchMyNotices } from "../../../utils/api.js";
+import {
+  fetchSuperUserDashboardStats,
+  fetchSuperUserNotices
+} from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -72,6 +47,7 @@ const SuperuserDashboard = () => {
   const [popupComponent, setPopupComponent] = useState(null);
   const [activeComponent, setActiveComponent] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
   const [stats, setStats] = useState({
     totalGroups: 0,
     totalParticipants: 0,
@@ -92,12 +68,22 @@ const SuperuserDashboard = () => {
   const closePopup = () => setPopupComponent(null);
 
   useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) setIsSidebarOpen(false);
+      else setIsSidebarOpen(true);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
         const [statsData, noticesData] = await Promise.all([
-          fetchDashboardStats(),
-          fetchMyNotices()
+          fetchSuperUserDashboardStats(),
+          fetchSuperUserNotices()
         ]);
         setStats(statsData || stats);
         setNotices(noticesData || []);
@@ -124,12 +110,12 @@ const SuperuserDashboard = () => {
     },
     {
       id: "groups",
-      name: "Personnel Units",
+      name: "Groups",
       icon: <Layers size={20} />,
       children: [
-        { name: "Deploy New Unit", action: "create" },
-        { name: "Unit Registry", action: "manage" },
-        { name: "Decommissioned Registry", action: "remove" }
+        { name: "Create Group", action: "create" },
+        { name: "Manage Group", action: "manage" },
+        { name: "Remove Group", action: "remove" }
       ],
       onClick: (action) => {
         if (action === "create") openPopup(<CreateGroup onClose={closePopup} />);
@@ -139,19 +125,17 @@ const SuperuserDashboard = () => {
     },
     {
       id: "participants",
-      name: "Active Entities",
+      name: "Participants",
       icon: <Users size={20} />,
       children: [
-        { name: "Provision Entity", action: "create" },
-        { name: "Live Telemetry", action: "active" },
-        { name: "Entity Master List", action: "manage" },
-        { name: "Historical Archive", action: "remove" },
-        { name: "Staging Area", action: "staging" },
-        { name: "Batch Insights", action: "summary" },
+        { name: "Create Participant", action: "create" },
+        { name: "Manage Participant", action: "manage" },
+        { name: "Remove Participant", action: "remove" },
+        { name: "Staging Participant", action: "staging" },
+        { name: "Participant Summary", action: "summary" },
       ],
       onClick: (action) => {
         if (action === "create") openPopup(<CreateParticipant onClose={closePopup} />);
-        else if (action === "active") setActiveComponent(<ActiveParticipant />);
         else if (action === "manage") setActiveComponent(<ManageParticipants />);
         else if (action === "remove") setActiveComponent(<RemoveParticipant />);
         else if (action === "staging") setActiveComponent(<StagingParticipant />);
@@ -160,12 +144,12 @@ const SuperuserDashboard = () => {
     },
     {
       id: "exams",
-      name: "Assessment Protocols",
+      name: "Exams",
       icon: <FileText size={20} />,
       children: [
-        { name: "Initialize Protocol", action: "create" },
-        { name: "Protocol Management", action: "manage" },
-        { name: "Protocol Archive", action: "remove" }
+        { name: "Create Exam", action: "create" },
+        { name: "Manage Exam", action: "manage" },
+        { name: "Remove Exam", action: "remove" }
       ],
       onClick: (action) => {
         if (action === "create") openPopup(<CreateExam onClose={closePopup} />);
@@ -175,34 +159,35 @@ const SuperuserDashboard = () => {
     },
     {
       id: "questions",
-      name: "Knowledge Modules",
+      name: "Questions",
       icon: <BookOpen size={20} />,
       children: [
-        { name: "Forge New Module", action: "create" },
-        { name: "Module Management", action: "manage" },
-        { name: "Module Staging", action: "staging" }
+        { name: "Create Question", action: "create" },
+        { name: "Manage Question", action: "manage" },
+        { name: "Remove Question", action: "remove" }
       ],
       onClick: (action) => {
         if (action === "create") openPopup(<CreateQuestion onClose={closePopup} />);
         else if (action === "manage") setActiveComponent(<ManageQuestion />);
         else if (action === "staging") setActiveComponent(<StagingQuestion />);
+        else if (action === "remove") setActiveComponent(<ManageQuestion />); // Fallback to manage for now if no RemoveQuestion exists
       },
     },
     {
       id: "assignments",
-      name: "Asset Deployment",
+      name: "Assignments",
       icon: <Send size={20} />,
       onClick: () => openPopup(<Assignments onClose={closePopup} />),
     },
     {
       id: "notice",
-      name: "Communication Hub",
+      name: "Notice",
       icon: <BellRing size={20} />,
       onClick: () => openPopup(<Notice onClose={closePopup} />),
     },
     {
       id: "feedbacks",
-      name: "Insight Telemetry",
+      name: "Feedbacks",
       icon: <MessageSquare size={20} />,
       onClick: () => openPopup(<Feedbacks onClose={closePopup} />),
     },
@@ -220,14 +205,14 @@ const SuperuserDashboard = () => {
           <Icon size={24} />
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Status</span>
-          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-500 text-[8px] font-bold uppercase tracking-tight border border-emerald-100/50">
+          <span className="text-[10px] font-bold text-slate-400 tracking-wide leading-none mb-1">Status</span>
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-500 text-[8px] font-bold tracking-tight border border-emerald-100/50">
             <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
             Operational
           </span>
         </div>
       </div>
-      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">{title}</h4>
+      <h4 className="text-[10px] font-bold text-slate-400 tracking-widest mb-1">{title}</h4>
       <div className="text-4xl font-extrabold text-slate-900 tracking-tighter">
         {isLoading ? "---" : value}
       </div>
@@ -252,12 +237,12 @@ const SuperuserDashboard = () => {
       <div className="p-10 bg-white rounded-[40px] border border-slate-50 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Institutional Performance</h3>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Cross-unit assessment frequency</p>
+            <h3 className="text-lg font-extrabold text-slate-600 tracking-tight">Performance Overview</h3>
+            <p className="text-xs text-slate-400 font-bold tracking-wide mt-1">Assessment distribution overview</p>
           </div>
           <div className="flex gap-2">
             {["Weekly", "Monthly"].map(tab => (
-              <button key={tab} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${tab === "Weekly" ? "bg-slate-900 text-white shadow-lg" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}>
+              <button key={tab} className={`px-4 py-2 rounded-xl text-[10px] font-bold tracking-wide transition-all ${tab === "Weekly" ? "bg-blue-500 text-white shadow-lg" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}>
                 {tab}
               </button>
             ))}
@@ -280,82 +265,110 @@ const SuperuserDashboard = () => {
       </div>
     );
   };
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full w-[300px]">
+      <div className="p-10 border-b border-slate-50 flex items-center gap-4">
+        <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-2xl shadow-slate-200">
+          2B
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold text-slate-600 tracking-tighter leading-none">2Brainer</h1>
+          <p className="text-[10px] font-bold text-indigo-600 tracking-widest mt-1.5">SuperUser</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto p-6 space-y-2 scrollbar-hide">
+        {navItems.map((item) => (
+          <div key={item.id} className="space-y-1">
+            <button
+              onClick={() => {
+                if (!item.children) {
+                  item.onClick();
+                  setExpandedId(null);
+                } else {
+                  setExpandedId(expandedId === item.id ? null : item.id);
+                }
+              }}
+              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all group ${(!item.children && !activeComponent && item.id === "dashboard") || expandedId === item.id ? "bg-gray-600 text-white shadow-xl shadow-slate-200" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+            >
+              <span className={`${(!item.children && !activeComponent && item.id === "dashboard") || expandedId === item.id ? "text-indigo-400" : "text-slate-400 group-hover:text-indigo-500"}`}>
+                {item.icon}
+              </span>
+              <span className="text-xs font-bold tracking-widest">{item.name}</span>
+              {item.children && (
+                <ChevronDown
+                  size={14}
+                  className={`ml-auto opacity-40 transition-transform duration-300 ${expandedId === item.id ? 'rotate-180' : ''}`}
+                />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {item.children && expandedId === item.id && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="ml-4 pl-4 border-l border-slate-50 space-y-1 mt-1 py-1">
+                    {item.children.map((child, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => item.onClick(child.action)}
+                        className="w-full text-left px-6 py-3 rounded-xl text-[10px] font-bold text-slate-400 tracking-widest hover:bg-slate-50 hover:text-indigo-600 transition-all border border-transparent hover:border-slate-100"
+                      >
+                        {child.name}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </nav>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] flex text-left font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="h-screen overflow-hidden bg-[#fafbfc] flex text-left font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      {/* Desktop Sidebar */}
+      <motion.aside
+        initial={false}
+        animate={{ width: isSidebarOpen ? 300 : 0, opacity: isSidebarOpen ? 1 : 0 }}
+        className="hidden lg:flex flex-col bg-white border-r border-slate-100 overflow-hidden shrink-0 h-screen transition-all duration-300"
+      >
+        <SidebarContent />
+      </motion.aside>
+ 
+      {/* Mobile Sidebar */}
       <AnimatePresence>
-        {!isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(true)}
-            className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden"
-          />
+        {isSidebarOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-60 lg:hidden"
+            />
+            <motion.div
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-[300px] bg-white border-r border-slate-100 flex flex-col z-70 lg:hidden"
+            >
+              <SidebarContent />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
-      <motion.aside
-        animate={{ x: isSidebarOpen ? 0 : -300 }}
-        className="fixed lg:static inset-y-0 left-0 w-[300px] bg-white border-r border-slate-100 flex flex-col z-50 overflow-hidden"
-      >
-        <div className="p-10 border-b border-slate-50 flex items-center gap-4">
-          <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-2xl shadow-slate-200">
-            E
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tighter leading-none">ExamPro</h1>
-            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-[0.2em] mt-1.5">Elite SuperUser</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto p-6 space-y-2 scrollbar-hide">
-          {navItems.map((item) => (
-            <div key={item.id} className="space-y-1">
-              <button
-                onClick={() => {
-                  if (!item.children) item.onClick();
-                  else setActiveComponent(<div className="p-20 text-center"><p className="text-slate-400 font-bold uppercase tracking-widest">Select an operation from {item.name}</p></div>);
-                }}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all group ${!item.children && !activeComponent && item.id === "dashboard" ? "bg-slate-900 text-white shadow-xl shadow-slate-200" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-              >
-                <span className={`${!item.children && !activeComponent && item.id === "dashboard" ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-900"}`}>
-                  {item.icon}
-                </span>
-                <span className="text-xs font-bold uppercase tracking-widest">{item.name}</span>
-                {item.children && <ChevronDown size={14} className="ml-auto opacity-40" />}
-              </button>
-
-              {item.children && (
-                <div className="ml-4 pl-4 border-l border-slate-50 space-y-1 mt-1 py-1">
-                  {item.children.map((child, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => item.onClick(child.action)}
-                      className="w-full text-left px-6 py-3 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:bg-slate-50 hover:text-indigo-600 transition-all border border-transparent hover:border-slate-100"
-                    >
-                      {child.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-
-        <div className="p-8 border-t border-slate-50 flex items-center gap-4 bg-slate-50/50">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
-            <HelpCircle size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest leading-none">Support Nexus</p>
-            <p className="text-[10px] text-slate-400 font-bold mt-1">v4.2.0 Build</p>
-          </div>
-        </div>
-      </motion.aside>
-
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-white">
         <header className="h-24 bg-white/80 backdrop-blur-md border-b border-slate-100 px-10 flex items-center justify-between z-30 shrink-0">
           <div className="flex items-center gap-6">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-3 bg-slate-50 rounded-xl text-slate-500 hover:bg-slate-100 transition shadow-sm">
@@ -363,7 +376,7 @@ const SuperuserDashboard = () => {
             </button>
             <div className="hidden md:flex items-center gap-3 bg-slate-50/50 px-5 py-2.5 rounded-2xl border border-slate-50 focus-within:bg-white focus-within:border-indigo-100 transition-all w-80 shadow-inner">
               <Search size={16} className="text-slate-400" />
-              <input type="text" placeholder="Search protocol telemetry..." className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest placeholder:text-slate-300 w-full" />
+              <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none text-[10px] font-bold tracking-wide placeholder:text-slate-300 w-full" />
             </div>
           </div>
 
@@ -382,27 +395,27 @@ const SuperuserDashboard = () => {
 
             <div className="flex items-center gap-4 pl-2 h-full">
               <div className="flex flex-col items-end">
-                <p className="text-xs font-extrabold text-slate-900 tracking-tight leading-none">{user?.name || "SuperUser"}</p>
-                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Operations</p>
+                <p className="text-xs font-extrabold text-slate-600 tracking-tight leading-none">{user?.name || "SuperUser"}</p>
+                <p className="text-3xl font-bold text-indigo-500 tracking-wide mt-1">Operations</p>
               </div>
               <div className="relative group">
-                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-xs shadow-xl shadow-slate-200 border-4 border-white transition-all group-hover:scale-105 cursor-pointer">
+                <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white font-bold text-xs shadow-xl shadow-slate-200 border-4 border-white transition-all group-hover:scale-105 cursor-pointer">
                   {user?.name?.charAt(0).toUpperCase() || <User size={20} />}
                 </div>
                 <div className="absolute right-0 top-full mt-4 w-64 bg-white rounded-[32px] border border-slate-100 shadow-2xl p-6 opacity-0 translate-y-4 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all">
                   <div className="border-b border-slate-50 pb-6 mb-6">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Authenticated Entity</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-wide mb-1">User Account</p>
                     <p className="text-sm font-extrabold text-slate-900 truncate">{user?.email}</p>
                   </div>
                   <div className="space-y-4">
-                    <button className="w-full flex items-center gap-3 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-slate-900 transition">
-                      <User size={16} className="text-slate-400" /> Identity Matrix
+                    <button className="w-full flex items-center gap-3 px-2 text-[10px] font-bold text-slate-500 tracking-wide hover:text-slate-900 transition">
+                      <User size={16} className="text-slate-400" /> Profile Settings
                     </button>
-                    <button className="w-full flex items-center gap-3 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-slate-900 transition">
-                      <Settings size={16} className="text-slate-400" /> Platform Configuration
+                    <button className="w-full flex items-center gap-3 px-2 text-[10px] font-bold text-slate-500 tracking-wide hover:text-slate-900 transition">
+                      <Settings size={16} className="text-slate-400" /> System Settings
                     </button>
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-2 text-[10px] font-bold text-red-500 uppercase tracking-[0.2em] hover:text-red-600 transition pt-2">
-                      <LogOut size={16} className="text-red-400" /> Deauthenticate
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-2 text-[10px] font-bold text-red-500 tracking-wider hover:text-red-600 transition pt-2">
+                      <LogOut size={16} className="text-red-400" /> Logout
                     </button>
                   </div>
                 </div>
@@ -411,7 +424,7 @@ const SuperuserDashboard = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto bg-[#fafbfc] relative scroll-smooth p-10">
+        <div className="flex-1 overflow-y-auto bg-[#fafbfc] scroll-smooth p-6 md:p-10">
           <AnimatePresence mode="wait">
             {activeComponent ? (
               <motion.div
@@ -423,8 +436,8 @@ const SuperuserDashboard = () => {
               >
                 <div className="p-10 bg-white rounded-[44px] shadow-sm border border-slate-50 min-h-[60vh]">
                   <div className="mb-10 flex items-center justify-between border-b border-slate-50 pb-8">
-                    <button onClick={() => setActiveComponent(null)} className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:gap-4 transition-all">
-                      <ChevronRight size={16} className="rotate-180" /> Return to Command Center
+                    <button onClick={() => setActiveComponent(null)} className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 tracking-wide hover:gap-4 transition-all">
+                      <ChevronRight size={16} className="rotate-180" /> Back to Dashboard
                     </button>
                   </div>
                   {React.isValidElement(activeComponent)
@@ -441,21 +454,21 @@ const SuperuserDashboard = () => {
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-l-4 border-slate-900 pl-8 py-2">
                   <div>
-                    <h2 className="text-4xl font-extrabold text-slate-900 tracking-tighter">Command Center</h2>
-                    <p className="text-sm text-slate-500 font-medium mt-2">Institutional oversight and assessment orchestration.</p>
+                    <h2 className="text-4xl font-extrabold text-blue-500 tracking-tighter">Dashboard</h2>
+                    <p className="text-sm text-slate-500 font-medium mt-2">Manage your organization's exams and participants.</p>
                   </div>
                   <div className="flex gap-4">
-                    <button onClick={() => openPopup(<CreateExam onClose={closePopup} />)} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
-                      <Plus size={16} className="text-indigo-400" /> Deploy Protocol
+                    <button onClick={() => openPopup(<CreateExam onClose={closePopup} />)} className="bg-slate-600 text-white px-8 py-4 rounded-2xl font-bold text-[10px] tracking-wider hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
+                      <Plus size={16} className="text-indigo-400" /> Create Exam
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <StatCard title="Entity Count" value={stats.totalParticipants} icon={Users} colorClass={{ bg: 'bg-emerald-50', text: 'text-emerald-500' }} delay={0.1} />
-                  <StatCard title="Active Protocols" value={stats.ActiveExams} icon={FileText} colorClass={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }} delay={0.2} />
-                  <StatCard title="Organizational Units" value={stats.totalGroups} icon={Layers} colorClass={{ bg: 'bg-amber-50', text: 'text-amber-500' }} delay={0.3} />
-                  <StatCard title="Knowledge Base" value={stats.totalExams * 5} icon={BookOpen} colorClass={{ bg: 'bg-slate-50', text: 'text-slate-900' }} delay={0.4} />
+                  <StatCard title="Total Participants" value={stats.totalParticipants} icon={Users} colorClass={{ bg: 'bg-emerald-50', text: 'text-emerald-500' }} delay={0.1} />
+                  <StatCard title="Active Exams" value={stats.ActiveExams} icon={FileText} colorClass={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }} delay={0.2} />
+                  <StatCard title="Groups" value={stats.totalGroups} icon={Layers} colorClass={{ bg: 'bg-amber-50', text: 'text-amber-500' }} delay={0.3} />
+                  <StatCard title="Questions" value={stats.totalExams * 5} icon={BookOpen} colorClass={{ bg: 'bg-slate-50', text: 'text-slate-900' }} delay={0.4} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -466,18 +479,18 @@ const SuperuserDashboard = () => {
                   <div className="space-y-6">
                     <div className="p-10 bg-slate-900 rounded-[40px] shadow-2xl shadow-indigo-100/30 text-white overflow-hidden relative group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/20 rounded-bl-[100px] transition-all group-hover:scale-150"></div>
-                      <h3 className="text-lg font-extrabold tracking-tight mb-2">Protocol Deployment</h3>
-                      <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-8">Rapid initialization sequence</p>
+                      <h3 className="text-lg font-extrabold tracking-tight mb-2">Quick Actions</h3>
+                      <p className="text-[10px] text-indigo-300 font-bold tracking-wide mb-8">Rapid initialization sequence</p>
                       <div className="space-y-4">
                         {[
-                          { name: 'Batch Asset Provisioning', icon: <Users size={14} />, action: () => openPopup(<CreateParticipant onClose={closePopup} />) },
-                          { name: 'Group Hierarchy Setup', icon: <Layers size={14} />, action: () => openPopup(<CreateGroup onClose={closePopup} />) },
-                          { name: 'Knowledge Module Forge', icon: <BookOpen size={14} />, action: () => openPopup(<CreateQuestion onClose={closePopup} />) }
+                          { name: 'Create Participant', icon: <Users size={14} />, action: () => openPopup(<CreateParticipant onClose={closePopup} />) },
+                          { name: 'Create Group', icon: <Layers size={14} />, action: () => openPopup(<CreateGroup onClose={closePopup} />) },
+                          { name: 'Create Question', icon: <BookOpen size={14} />, action: () => openPopup(<CreateQuestion onClose={closePopup} />) }
                         ].map((btn, i) => (
                           <button key={i} onClick={btn.action} className="w-full flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white hover:text-slate-900 transition-all group/btn">
                             <div className="flex items-center gap-3">
                               <span className="text-indigo-400 group-hover/btn:text-indigo-600 transition-colors">{btn.icon}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-widest">{btn.name}</span>
+                              <span className="text-[10px] font-bold tracking-wide">{btn.name}</span>
                             </div>
                             <ChevronRight size={14} className="opacity-40" />
                           </button>
@@ -489,12 +502,12 @@ const SuperuserDashboard = () => {
                       <div className="w-16 h-16 bg-slate-50 rounded-[24px] flex items-center justify-center text-slate-200 mb-6">
                         <BarChart3 size={32} />
                       </div>
-                      <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">System Telemetry</h4>
-                      <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-wide leading-relaxed">
-                        Complete auditing of institutional metrics and node performance.
+                      <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">System Stats</h4>
+                      <p className="text-[10px] text-slate-400 font-bold mt-2 tracking-wide leading-relaxed">
+                        Detailed metrics and performance data.
                       </p>
-                      <button className="mt-8 text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:gap-4 transition-all flex items-center gap-2">
-                        View Master Report <ChevronRight size={14} />
+                      <button className="mt-8 text-[10px] font-bold text-indigo-600 tracking-wide hover:gap-4 transition-all flex items-center gap-2">
+                        View Report <ChevronRight size={14} />
                       </button>
                     </div>
                   </div>
@@ -511,8 +524,8 @@ const SuperuserDashboard = () => {
               <motion.div initial={{ x: 400 }} animate={{ x: 0 }} exit={{ x: 400 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed right-0 top-0 bottom-0 w-[400px] bg-white border-l border-slate-100 z-[70] shadow-2xl flex flex-col">
                 <div className="p-10 border-b border-slate-50 flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Admin Signals</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Broadcast registry</p>
+                    <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Notifications</h3>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-wide mt-1">Recent updates</p>
                   </div>
                   <button onClick={() => setShowNotices(false)} className="p-3 bg-slate-50 rounded-xl text-slate-400 hover:text-red-500 transition">
                     <X size={20} />
@@ -524,7 +537,7 @@ const SuperuserDashboard = () => {
                       <div className="w-16 h-16 bg-slate-50 rounded-[28px] flex items-center justify-center text-slate-200">
                         <BellRing size={32} />
                       </div>
-                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Zero Signals Identified</p>
+                      <p className="text-[10px] font-bold text-slate-300 tracking-wider">No notifications</p>
                     </div>
                   ) : (
                     notices.map((n, i) => (
@@ -532,7 +545,7 @@ const SuperuserDashboard = () => {
                         <div className="flex items-center gap-3 mb-4">
                           <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-bold">A</div>
                           <div>
-                            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Administrator Broadcast</p>
+                            <p className="text-[10px] font-bold text-indigo-600 tracking-wide">Admin Message</p>
                             <p className="text-[8px] font-bold text-slate-300">{new Date(n.createdAt).toLocaleString()}</p>
                           </div>
                         </div>

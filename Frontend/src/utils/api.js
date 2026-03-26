@@ -22,10 +22,16 @@ export const getUser = () => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
 };
 
+export const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+};
+
 // Auth helper using fetch (for callers that need raw fetch)
 export const authFetch = async (url, options = {}) => {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:5000/api${url}`, {
+    const path = url.startsWith('/api') ? url.slice(4) : url;
+    const res = await fetch(`http://localhost:5000/api${path}`, {
         ...options,
         headers: {
             ...(options.headers || {}),
@@ -247,10 +253,10 @@ export const createQuestion = async (payload) => {
     return res.data;
 };
 
-export const uploadQuestionExcel = async (examId, file) => {
+export const uploadQuestionExcel = async (file) => {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await api.post(`/question/upload/${examId}`, fd, {
+    const res = await api.post('/question/upload', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
@@ -282,11 +288,6 @@ export const sendAdminNotice = async (data) => {
     return res.data;
 };
 
-export const sendSuperUserNotice = async (formData) => {
-    const res = await api.post('/notice/superuser', formData);
-    return res.data;
-};
-
 export const sendSuperAdminNotice = async (formData) => {
     const res = await api.post('/notice/superadmin', formData);
     return res.data;
@@ -313,6 +314,84 @@ export const fetchSuperUsersByOrg = async () => {
     const res = await api.get('/admin/superusers');
     const json = res.data;
     return Array.isArray(json) ? json : json.superUsers || [];
+};
+
+// ─── SUPERUSER SPECIFIC ───────────────────────────────────────────────────────
+export const fetchSuperUserDashboardStats = async () => {
+    const res = await api.get('/superuser/dashboard-stats');
+    return res.data;
+};
+
+export const fetchSuperUserGroups = async () => {
+    const res = await api.get('/superuser/groups');
+    return res.data;
+};
+
+export const fetchSuperUserParticipants = async () => {
+    const res = await api.get('/superuser/participants');
+    return res.data;
+};
+
+export const fetchSuperUserExams = async () => {
+    const res = await api.get('/superuser/exams');
+    return res.data;
+};
+
+export const fetchSuperUserNotices = async () => {
+    const res = await api.get('/superuser/notices');
+    return res.data;
+};
+
+export const sendSuperUserNotice = async (payload) => {
+    const res = await api.post('/superuser/notices', payload);
+    return res.data;
+};
+
+export const fetchSuperUserFeedbacks = async () => {
+    const res = await api.get('/superuser/feedbacks');
+    return res.data;
+};
+
+export const uploadSuperUserAssignment = async (formData) => {
+    const res = await api.post('/superuser/assignments', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
+};
+
+export const createSuperUserGroup = async (payload) => {
+    const res = await api.post('/superuser/groups', payload);
+    return res.data;
+};
+
+export const deleteSuperUserGroup = async (id) => {
+    const res = await api.delete(`/superuser/groups/${id}`);
+    return res.data;
+};
+
+export const createSuperUserExam = async (payload) => {
+    const res = await api.post('/superuser/exams', payload);
+    return res.data;
+};
+
+export const deleteSuperUserExam = async (id) => {
+    const res = await api.delete(`/superuser/exams/${id}`);
+    return res.data;
+};
+
+export const createSuperUserSingleParticipant = async (payload) => {
+    const res = await api.post('/superuser/participants/single', payload);
+    return res.data;
+};
+
+export const uploadSuperUserParticipantsExcel = async (groupId, file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('group_ids', JSON.stringify([groupId]));
+    const res = await api.post('/superuser/participants/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
 };
 
 // ─── ASSIGNMENTS ──────────────────────────────────────────────────────────────
@@ -355,6 +434,81 @@ export const fetchQuestionHistory = async (params = {}) => {
     if (params.to) query.set('to', params.to);
     if (params.file_code) query.set('file_code', params.file_code);
     const res = await api.get(`/admin/history/questions?${query.toString()}`);
+    return res.data;
+};
+
+// ─── CATEGORIES & TOPICS ─────────────────────────────────────────────────────
+export const fetchCategories = async () => {
+    const res = await api.get('/categories');
+    return res.data;
+};
+
+export const createCategory = async (payload) => {
+    const res = await api.post('/categories', payload);
+    return res.data;
+};
+
+export const updateCategory = async (id, payload) => {
+    const res = await api.put(`/categories/${id}`, payload);
+    return res.data;
+};
+
+export const deleteCategory = async (id) => {
+    const res = await api.delete(`/categories/${id}`);
+    return res.data;
+};
+
+export const fetchRemovedCategories = async () => {
+    const res = await api.get('/categories/removed');
+    return res.data;
+};
+
+export const fetchTopics = async (categoryId) => {
+    const url = categoryId ? `/topics?category_id=${categoryId}` : '/topics';
+    const res = await api.get(url);
+    return res.data;
+};
+
+export const createTopic = async (payload) => {
+    const res = await api.post('/topics', payload);
+    return res.data;
+};
+
+export const updateTopic = async (id, payload) => {
+    const res = await api.put(`/topics/${id}`, payload);
+    return res.data;
+};
+
+export const deleteTopic = async (id) => {
+    const res = await api.delete(`/topics/${id}`);
+    return res.data;
+};
+
+export const fetchRemovedTopics = async () => {
+    const res = await api.get('/topics/removed');
+    return res.data;
+};
+
+// ─── QUESTION MAPPING ────────────────────────────────────────────────────────
+export const fetchAvailableQuestions = async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.category_id) query.set('category_id', params.category_id);
+    if (params.topic_id) query.set('topic_id', params.topic_id);
+    const res = await api.get(`/question/available?${query.toString()}`);
+    return res.data;
+};
+
+export const linkQuestionToExam = async (examId, questionId, marks) => {
+    const res = await api.post(`/question/link`, {
+        examId,
+        questionIds: [questionId],
+        marksMap: { [questionId]: marks }
+    });
+    return res.data;
+};
+
+export const unlinkQuestionFromExam = async (examId, questionId) => {
+    const res = await api.post(`/question/unlink`, { examId, questionId });
     return res.data;
 };
 

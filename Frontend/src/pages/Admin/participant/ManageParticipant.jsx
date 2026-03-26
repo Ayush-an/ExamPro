@@ -63,13 +63,18 @@ const ManageParticipant = () => {
   const loadBatchCodes = async () => {
     try {
       const data = await fetchUploadedBatches();
-      console.log("RAW BATCH RESPONSE 👇", data); // 👈 IMPORTANT
-      const normalized = normalizeBatches(data);
-      console.log("NORMALIZED 👇", normalized);
+      // Backend returns flat array of batch code strings
+      const list = Array.isArray(data) ? data : data.batches || data.data || [];
+      const normalized = list
+        .map((item) => {
+          if (typeof item === 'string') return { uploadBatchCode: item };
+          const b = item?.dataValues || item;
+          if (b?.batchCode) return { uploadBatchCode: b.batchCode };
+          if (b?.uploadBatchCode) return { uploadBatchCode: b.uploadBatchCode };
+          return null;
+        })
+        .filter(Boolean);
       setBatchCodes(normalized);
-      console.log("FIRST BATCH ITEM 👇", data.batches[0]);
-      console.log("BATCH KEYS 👇", Object.keys(data.batches[0]));
-
     } catch (err) {
       addToast("Failed to load batch codes", "error");
     }
@@ -224,7 +229,7 @@ const ManageParticipant = () => {
     <div className="w-full relative">
 
       {/* Toast Notifications */}
-      <div className="fixed z-[100] flex flex-col gap-2 top-5 right-5">
+      <div className="fixed z-[100] flex flex-col gap-2 top-5 pt-8 right-5">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -237,15 +242,15 @@ const ManageParticipant = () => {
         ))}
       </div>
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Manage Participants</h2>
+          <h2 className="text-2xl font-extrabold text-slate-700 tracking-tight">Manage Participants</h2>
           <p className="text-sm text-slate-500 mt-1">View, filter, and edit user accounts.</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mb-8 flex flex-wrap items-center gap-4">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 mb-5 flex flex-wrap items-center gap-4">
         <select className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all outline-none" value={batchFilter}
           onChange={(e) => setBatchFilter(e.target.value)}   >
           <option value="">All Groups</option>
@@ -286,12 +291,12 @@ const ManageParticipant = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Participant Details</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Contact Info</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Group & Batch</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              <tr className="bg-slate-50/50 border-b border-slate-300">
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Participant Details</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Contact Info</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Group & Batch</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 tracking-widest text-right">Actions</th>
               </tr>
             </thead>
 
@@ -313,8 +318,8 @@ const ManageParticipant = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${p.status === "Approved" || p.status === "Active" ? "bg-emerald-50 text-emerald-600" :
-                          p.status === "Pending" ? "bg-amber-50 text-amber-600" :
-                            "bg-rose-50 text-rose-600"
+                        p.status === "Pending" ? "bg-amber-50 text-amber-600" :
+                          "bg-rose-50 text-rose-600"
                         }`}>
                         {p.status}
                       </span>
@@ -346,7 +351,7 @@ const ManageParticipant = () => {
 
       {/* Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm pt-20">
           <div className="bg-white rounded-[32px] p-8 w-[480px] shadow-2xl relative">
             <button onClick={() => setModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
               <X className="w-5 h-5" />

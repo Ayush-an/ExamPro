@@ -1,7 +1,8 @@
 const {
     Group, User, Role, UserRole, GroupMember,
     StagingParticipant, ParticipantFile, History,
-    Exam, Question, ExamGroup, Op: _Op
+    Exam, Question, ExamGroup, Category, Topic, Op: _Op,
+    sequelize
 } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
@@ -50,6 +51,71 @@ function isValidEmail(email) {
 function isValidMobile(mobile) {
     if (!mobile) return true; // mobile optional
     return /^\+?[0-9]{7,15}$/.test(String(mobile).trim());
+}
+
+/**
+ * Shared helper to promote a record (either from Excel row or Staging) to a real User
+ */
+async function promoteToParticipant(orgId, data, opts = {}) {
+    const { full_name, email, mobile, batch_code, group_ids, creator_id, creator_name, file_code, file_name } = data;
+
+    // 1. Ensure Role exists
+    const [participantRole] = await Role.findOrCreate({
+        where: { code: 'PARTICIPANT', organization_id: orgId },
+        defaults: { name: 'Participant', status_code: 'ACTIVE' },
+    });
+
+    // 2. Create User
+    const passwordPlain = generateRandomPassword(8);
+    const hashedPassword = await bcrypt.hash(passwordPlain, 10);
+
+    const user = await User.create({
+        organization_id: orgId,
+        full_name: full_name.trim(),
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        mobile: mobile ? mobile.trim() : null,
+        status_code: 'ACTIVE',
+        upload_batch_code: batch_code || 'UPLOAD',
+    });
+
+    // 3. Assign Role
+    await UserRole.create({
+        organization_id: orgId,
+        user_id: user.id,
+        role_id: participantRole.id,
+    });
+
+    // 4. Assign Groups
+    const gids = Array.isArray(group_ids) ? group_ids : [group_ids].filter(Boolean);
+    for (const gid of gids) {
+        await GroupMember.findOrCreate({
+            where: { organization_id: orgId, group_id: Number(gid), user_id: user.id },
+            defaults: {
+                organization_id: orgId,
+                group_id: Number(gid),
+                user_id: user.id,
+                status_code: 'ACTIVE',
+                role_code: 'MEMBER',
+            },
+        });
+    }
+
+    // 5. Log History
+    await logHistory(orgId, 'PARTICIPANT', user.id, user.full_name, 'CREATE', {
+        file_name: file_name || null,
+        file_code: file_code || null,
+        changed_by_id: creator_id || null,
+        changed_by_name: creator_name || null,
+        detail: {
+            email: user.email,
+            groups: gids,
+            method: file_code ? 'UPLOAD_AUTO' : (batch_code === 'MANUAL' ? 'MANUAL' : 'STAGING_APPROVE'),
+            source_batch: batch_code
+        },
+    });
+
+    return user;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -143,7 +209,8 @@ exports.uploadParticipants = async (req, res) => {
         const existingMobiles = new Set(existingUsers.map(u => u.mobile).filter(Boolean));
 
         const batchCode = generateBatchCode();
-        const stagingRecords = [];
+        let autoApprovedCount = 0;
+        let errorCount = 0;
 
         for (let idx = 0; idx < rows.length; idx++) {
             const row = rows[idx];
@@ -188,29 +255,41 @@ exports.uploadParticipants = async (req, res) => {
                 issueTypes.push('DUPLICATE_MOBILE_IN_DB');
             }
 
-            const hasIssue = issues.length > 0;
-            stagingRecords.push({
-                organization_id: orgId,
-                batch_code: batchCode,
-                file_code: fileCode,
-                file_name: storedFileName,
-                group_id: groupIds[0], // primary group
-                group_ids: groupIds,
-                full_name: fullName || 'Unknown',
-                email: email || 'invalid@invalid.com',
-                mobile: mobile || null,
-                status_code: hasIssue ? 'ERROR' : 'PENDING',
-                issues: issues.length > 0 ? JSON.stringify(issues) : null,
-                issue_type: issueTypes.length > 0 ? issueTypes.join(',') : null,
-            });
+            if (issues.length === 0) {
+                // Auto-promote to Participant
+                await promoteToParticipant(orgId, {
+                    full_name: fullName,
+                    email,
+                    mobile,
+                    batch_code: batchCode,
+                    group_ids: groupIds,
+                    creator_id: changedBy,
+                    creator_name: changedByName,
+                    file_code: fileCode,
+                    file_name: storedFileName
+                });
+                autoApprovedCount++;
+            } else {
+                // Save to Staging
+                await StagingParticipant.create({
+                    organization_id: orgId,
+                    batch_code: batchCode,
+                    file_code: fileCode,
+                    file_name: storedFileName,
+                    group_id: groupIds[0],
+                    group_ids: groupIds,
+                    full_name: fullName || 'Unknown',
+                    email: email || 'invalid@invalid.com',
+                    mobile: mobile || null,
+                    status_code: 'ERROR',
+                    issues: JSON.stringify(issues),
+                    issue_type: issueTypes.join(','),
+                });
+                errorCount++;
+            }
         }
 
-        await StagingParticipant.bulkCreate(stagingRecords);
-
         // Save to ParticipantFile
-        const errorCount = stagingRecords.filter(r => r.status_code === 'ERROR').length;
-        const pendingCount = stagingRecords.filter(r => r.status_code === 'PENDING').length;
-
         await ParticipantFile.create({
             organization_id: orgId,
             file_code: fileCode,
@@ -218,8 +297,8 @@ exports.uploadParticipants = async (req, res) => {
             original_filename: originalName,
             total_rows: rows.length,
             error_rows: errorCount,
-            pending_rows: pendingCount,
-            approved_rows: 0,
+            pending_rows: 0,
+            approved_rows: autoApprovedCount,
             created_by: changedBy,
             group_ids: groupIds,
         });
@@ -230,17 +309,17 @@ exports.uploadParticipants = async (req, res) => {
             file_code: fileCode,
             changed_by_id: changedBy,
             changed_by_name: changedByName,
-            detail: { total: rows.length, errors: errorCount, pending: pendingCount, groups: groupIds },
+            detail: { total: rows.length, errors: errorCount, auto_approved: autoApprovedCount, groups: groupIds },
         });
 
         res.json({
-            message: 'File uploaded to staging',
+            message: 'File processed',
             batch_code: batchCode,
             file_code: fileCode,
             file_name: storedFileName,
             total: rows.length,
             errors: errorCount,
-            pending: pendingCount,
+            approved: autoApprovedCount,
         });
     } catch (err) {
         console.error('uploadParticipants error:', err);
@@ -279,48 +358,14 @@ exports.createSingleParticipant = async (req, res) => {
         const existing = await User.findOne({ where: { email: email.trim().toLowerCase(), organization_id: orgId } });
         if (existing) return res.status(400).json({ error: 'Email already registered in this organization' });
 
-        const [participantRole] = await Role.findOrCreate({
-            where: { code: 'PARTICIPANT', organization_id: orgId },
-            defaults: { name: 'Participant', status_code: 'ACTIVE' },
-        });
-
-        const passwordPlain = generateRandomPassword(8);
-        const hashedPassword = await bcrypt.hash(passwordPlain, 10);
-
-        const user = await User.create({
-            organization_id: orgId,
-            full_name: full_name.trim(),
-            email: email.trim().toLowerCase(),
-            password: hashedPassword,
-            mobile: mobile ? mobile.trim() : null,
-            status_code: 'ACTIVE',
-            upload_batch_code: 'MANUAL',
-        });
-
-        await UserRole.create({
-            organization_id: orgId,
-            user_id: user.id,
-            role_id: participantRole.id,
-        });
-
-        // Add to all selected groups
-        for (const gId of groupIds) {
-            await GroupMember.findOrCreate({
-                where: { organization_id: orgId, group_id: gId, user_id: user.id },
-                defaults: {
-                    organization_id: orgId,
-                    group_id: gId,
-                    user_id: user.id,
-                    status_code: 'ACTIVE',
-                    role_code: 'MEMBER',
-                },
-            });
-        }
-
-        await logHistory(orgId, 'PARTICIPANT', user.id, user.full_name, 'CREATE', {
-            changed_by_id: changedBy,
-            changed_by_name: changedByName,
-            detail: { email: user.email, mobile: user.mobile, groups: groupIds, method: 'MANUAL' },
+        const user = await promoteToParticipant(orgId, {
+            full_name,
+            email,
+            mobile,
+            batch_code: 'MANUAL',
+            group_ids: groupIds,
+            creator_id: changedBy,
+            creator_name: changedByName
         });
 
         res.json({ message: 'Participant created successfully', userId: user.id });
@@ -416,15 +461,49 @@ exports.updateStagingParticipant = async (req, res) => {
         });
         if (batchDup) { issues.push('Duplicate email in file'); issueTypes.push('DUPLICATE_EMAIL_IN_FILE'); }
 
+        const isNowClean = issues.length === 0;
+
+        if (isNowClean) {
+            // Auto-promote and delete from staging
+            await promoteToParticipant(orgId, {
+                full_name: fullName,
+                email,
+                mobile,
+                batch_code: record.batch_code,
+                group_ids: Number(groupId) === Number(record.group_id) ? record.group_ids : [groupId],
+                creator_id: changedBy,
+                creator_name: changedByName,
+                file_code: record.file_code,
+                file_name: record.file_name
+            });
+
+            // Update ParticipantFile counts (inc approved, dec error)
+            await ParticipantFile.update(
+                {
+                    approved_rows: sequelize.literal('approved_rows + 1'),
+                    error_rows: sequelize.literal('error_rows - 1')
+                },
+                { where: { file_code: record.file_code, organization_id: orgId } }
+            );
+
+            await record.destroy();
+
+            return res.json({
+                success: true,
+                message: 'Record fixed and promoted to Participant',
+                promoted: true
+            });
+        }
+
         const old = { full_name: record.full_name, email: record.email, mobile: record.mobile };
         await record.update({
             full_name: fullName,
             email,
             mobile: mobile || null,
             group_id: groupId,
-            issues: issues.length > 0 ? JSON.stringify(issues) : null,
+            issues: JSON.stringify(issues),
             issue_type: issueTypes.join(',') || null,
-            status_code: issues.length > 0 ? 'ERROR' : 'PENDING',
+            status_code: 'ERROR',
         });
 
         await logHistory(orgId, 'PARTICIPANT', record.id, fullName, 'UPDATE', {
@@ -437,7 +516,7 @@ exports.updateStagingParticipant = async (req, res) => {
 
         res.json({
             success: true,
-            message: issues.length > 0 ? 'Record updated but still has issues' : 'Record updated — ready to approve',
+            message: 'Record updated but still has issues',
             record: { ...record.toJSON(), issues },
         });
     } catch (err) {
@@ -460,45 +539,29 @@ exports.approveStagingParticipant = async (req, res) => {
         const record = await StagingParticipant.findOne({ where: { id, organization_id: orgId } });
         if (!record) return res.status(404).json({ error: 'Record not found' });
         if (record.status_code === 'ERROR') return res.status(400).json({ error: 'Record still has issues — fix them first' });
-        if (record.status_code === 'APPROVED') return res.status(400).json({ error: 'Already approved' });
-
-        const [participantRole] = await Role.findOrCreate({
-            where: { code: 'PARTICIPANT', organization_id: orgId },
-            defaults: { name: 'Participant', status_code: 'ACTIVE' },
-        });
-
-        const passwordPlain = generateRandomPassword(8);
-        const hashedPassword = await bcrypt.hash(passwordPlain, 10);
-
-        const user = await User.create({
-            organization_id: orgId,
+        const user = await promoteToParticipant(orgId, {
             full_name: record.full_name,
             email: record.email,
-            password: hashedPassword,
             mobile: record.mobile,
-            status_code: 'ACTIVE',
-            upload_batch_code: record.batch_code,
-        });
-
-        await UserRole.create({ organization_id: orgId, user_id: user.id, role_id: participantRole.id });
-
-        const groupIds = record.group_ids || (record.group_id ? [record.group_id] : []);
-        for (const gId of groupIds) {
-            await GroupMember.findOrCreate({
-                where: { organization_id: orgId, group_id: gId, user_id: user.id },
-                defaults: { organization_id: orgId, group_id: gId, user_id: user.id, status_code: 'ACTIVE', role_code: 'MEMBER' },
-            });
-        }
-
-        await record.update({ status_code: 'APPROVED' });
-
-        await logHistory(orgId, 'PARTICIPANT', user.id, user.full_name, 'CREATE', {
-            file_name: record.file_name,
+            batch_code: record.batch_code,
+            group_ids: record.group_ids || (record.group_id ? [record.group_id] : []),
+            creator_id: changedBy,
+            creator_name: changedByName,
             file_code: record.file_code,
-            changed_by_id: changedBy,
-            changed_by_name: changedByName,
-            detail: { email: user.email, groups: groupIds, approved_from_staging: true },
+            file_name: record.file_name
         });
+
+        // Update ParticipantFile counts
+        const inc = record.status_code === 'PENDING' ? { pending_rows: sequelize.literal('pending_rows - 1') } : { error_rows: sequelize.literal('error_rows - 1') };
+        await ParticipantFile.update(
+            {
+                approved_rows: sequelize.literal('approved_rows + 1'),
+                ...inc
+            },
+            { where: { file_code: record.file_code, organization_id: orgId } }
+        );
+
+        await record.destroy();
 
         res.json({ success: true, message: 'Participant approved and added', userId: user.id });
     } catch (err) {
@@ -526,46 +589,33 @@ exports.approveAllStagingBatch = async (req, res) => {
 
         if (records.length === 0) return res.status(400).json({ error: 'No pending records in this batch' });
 
-        const [participantRole] = await Role.findOrCreate({
-            where: { code: 'PARTICIPANT', organization_id: orgId },
-            defaults: { name: 'Participant', status_code: 'ACTIVE' },
-        });
-
         let created = 0;
+        let fileCode = null;
         for (const rec of records) {
-            const passwordPlain = generateRandomPassword(8);
-            const hashedPassword = await bcrypt.hash(passwordPlain, 10);
-
-            const user = await User.create({
-                organization_id: orgId,
+            fileCode = rec.file_code;
+            await promoteToParticipant(orgId, {
                 full_name: rec.full_name,
                 email: rec.email,
-                password: hashedPassword,
                 mobile: rec.mobile,
-                status_code: 'ACTIVE',
-                upload_batch_code: batch_code,
-            });
-
-            await UserRole.create({ organization_id: orgId, user_id: user.id, role_id: participantRole.id });
-
-            const groupIds = rec.group_ids || (rec.group_id ? [rec.group_id] : []);
-            for (const gId of groupIds) {
-                await GroupMember.findOrCreate({
-                    where: { organization_id: orgId, group_id: gId, user_id: user.id },
-                    defaults: { organization_id: orgId, group_id: gId, user_id: user.id, status_code: 'ACTIVE', role_code: 'MEMBER' },
-                });
-            }
-
-            await rec.update({ status_code: 'APPROVED' });
-
-            await logHistory(orgId, 'PARTICIPANT', user.id, user.full_name, 'CREATE', {
-                file_name: rec.file_name,
+                batch_code: batch_code,
+                group_ids: rec.group_ids || (rec.group_id ? [rec.group_id] : []),
+                creator_id: changedBy,
+                creator_name: changedByName,
                 file_code: rec.file_code,
-                changed_by_id: changedBy,
-                changed_by_name: changedByName,
-                detail: { email: user.email, groups: groupIds, source: 'BATCH_APPROVE' },
+                file_name: rec.file_name
             });
+            await rec.destroy();
             created++;
+        }
+
+        if (fileCode) {
+            await ParticipantFile.update(
+                {
+                    approved_rows: sequelize.literal(`approved_rows + ${created}`),
+                    pending_rows: sequelize.literal(`pending_rows - ${created}`)
+                },
+                { where: { file_code: fileCode, organization_id: orgId } }
+            );
         }
 
         res.json({ success: true, message: `${created} participants approved and added`, created });
@@ -634,22 +684,59 @@ exports.getDashboardStats = async (req, res) => {
         const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
         const superUserRole = await Role.findOne({ where: { code: 'SUPERUSER', organization_id: orgId } });
 
+        // Total Counts
         const totalGroups = await Group.count({ where: { organization_id: orgId } });
         const totalExams = await Exam.count({ where: { organization_id: orgId } });
-        const ActiveExams = await Exam.count({ where: { organization_id: orgId, status_code: 'ACTIVE' } });
-        const InactiveExams = totalExams - ActiveExams;
+        const totalCategories = await Category.count({ where: { organization_id: orgId } });
+        const totalTopics = await Topic.count({ where: { organization_id: orgId } });
+        const totalQuestions = await Question.count({ where: { organization_id: orgId } });
+
+        // Active Counts
+        const activeGroups = await Group.count({ where: { organization_id: orgId, status_code: 'ACTIVE' } });
+        const activeExams = await Exam.count({ where: { organization_id: orgId, status_code: 'ACTIVE' } });
 
         let totalParticipants = 0;
+        let activeParticipants = 0;
         if (participantRole) {
             totalParticipants = await UserRole.count({ where: { role_id: participantRole.id, organization_id: orgId } });
+            activeParticipants = await UserRole.count({
+                where: { role_id: participantRole.id, organization_id: orgId },
+                include: [{ model: User, where: { status_code: 'ACTIVE' } }]
+            });
         }
 
         let totalSuperUsers = 0;
+        let activeSuperUsers = 0;
         if (superUserRole) {
             totalSuperUsers = await UserRole.count({ where: { role_id: superUserRole.id, organization_id: orgId } });
+            activeSuperUsers = await UserRole.count({
+                where: { role_id: superUserRole.id, organization_id: orgId },
+                include: [{ model: User, where: { status_code: 'ACTIVE' } }]
+            });
         }
 
-        res.json({ totalGroups, totalParticipants, totalSuperUsers, totalExams, ActiveExams, InactiveExams });
+        // Exam Timing Stats
+        const now = new Date();
+        const upcomingExams = await Exam.count({
+            where: {
+                organization_id: orgId,
+                start_date: { [Op.gt]: now }
+            }
+        });
+        const completedExams = await Exam.count({
+            where: {
+                organization_id: orgId,
+                end_date: { [Op.lt]: now }
+            }
+        });
+
+        res.json({
+            totalGroups, activeGroups,
+            totalParticipants, activeParticipants,
+            totalExams, activeExams, upcomingExams, completedExams,
+            totalCategories, totalTopics, totalQuestions,
+            totalSuperUsers, activeSuperUsers
+        });
     } catch (err) {
         console.error('getDashboardStats error:', err);
         res.status(500).json({ error: 'Server error' });
@@ -659,6 +746,59 @@ exports.getDashboardStats = async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 //  SUPERUSERS / NOTICES / FEEDBACK
 // ═══════════════════════════════════════════════════════════════════════════
+
+exports.createSuperUser = async (req, res) => {
+    try {
+        const { name, email, mobile, password } = req.body;
+        const orgId = req.user.organization_id;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Name, email and password are required' });
+        }
+
+        // 1. Check if user already exists
+        const existing = await User.findOne({ where: { email: email.toLowerCase(), organization_id: orgId } });
+        if (existing) return res.status(400).json({ message: 'Email already registered in this organization' });
+
+        // 2. Find or create SUPERUSER role
+        const [superUserRole] = await Role.findOrCreate({
+            where: { code: 'SUPERUSER', organization_id: orgId },
+            defaults: { name: 'Super User', status_code: 'ACTIVE', is_system: true }
+        });
+
+        // 3. Create User
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await User.create({
+            organization_id: orgId,
+            full_name: name.trim(),
+            email: email.trim().toLowerCase(),
+            password: hashedPassword,
+            mobile: mobile ? mobile.trim() : null,
+            status_code: 'ACTIVE',
+            approved: true
+        });
+
+        // 4. Assign Role
+        await UserRole.create({
+            organization_id: orgId,
+            user_id: user.id,
+            role_id: superUserRole.id,
+            assigned_by: req.user.id
+        });
+
+        // 5. Log History
+        await logHistory(orgId, 'SUPERUSER', user.id, user.full_name, 'CREATE', {
+            changed_by_id: req.user.id,
+            changed_by_name: req.user.full_name || 'Admin',
+            detail: { email: user.email }
+        });
+
+        res.status(201).json({ message: 'SuperUser created successfully', superUser: user });
+    } catch (err) {
+        console.error('createSuperUser error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
 
 exports.getSuperUsers = async (req, res) => {
     try {

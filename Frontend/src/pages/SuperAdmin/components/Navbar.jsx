@@ -1,9 +1,12 @@
+// Navbar.jsx
 import { BellIcon, EnvelopeIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { FiFile } from "react-icons/fi";
-import { Dialog, Transition } from "@headlessui/react";
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle, Transition, TransitionChild, Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import { Fragment, useState, useEffect } from "react";
 import { fetchFeedbacks, sendNotice, fetchOrganizations } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
+import SuperAdminProfilePopup from "./SuperAdminProfilePopup";
+import { X, Send, Mail, Bell, AlertCircle } from "lucide-react";
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -121,258 +124,278 @@ export default function Navbar() {
 
           <div className="h-6 w-px bg-slate-200 mx-2"></div>
 
-          {/* Profile */}
-          <div className="flex items-center gap-3 pl-2 cursor-pointer group">
-            <div className="text-right flex flex-col">
-              <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition truncate max-w-[120px]">
-                {user?.name || user?.full_name || "Super Admin"}
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user?.role || "SUPERADMIN"}</span>
-            </div>
-            <div className="relative">
-              <img
-                src={photo}
-                className="object-cover w-10 h-10 rounded-xl ring-2 ring-slate-100 group-hover:ring-indigo-100 transition"
-                alt="profile"
-              />
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
-            </div>
-          </div>
+          {/* Profile Popover */}
+          <Popover className="relative">
+            <PopoverButton className="flex items-center gap-3 pl-2 cursor-pointer group outline-none focus:outline-none border-none bg-transparent">
+              <div className="text-right flex flex-col pointer-events-none">
+                <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition truncate max-w-[120px]">
+                  {user?.name || user?.full_name || "Super Admin"}
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user?.role || "SUPERADMIN"}</span>
+              </div>
+              <div className="relative pointer-events-none">
+                <img
+                  src={photo}
+                  className="object-cover w-10 h-10 rounded-xl ring-2 ring-slate-100 group-hover:ring-indigo-100 transition"
+                  alt="profile"
+                />
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
+              </div>
+            </PopoverButton>
+
+            <PopoverPanel
+              transition
+              anchor="bottom end"
+              className="z-50 mt-3 w-screen max-w-sm transition data-[closed]:translate-y-1 data-[closed]:opacity-0 data-[enter]:duration-200 data-[leave]:duration-150 data-[enter]:ease-out data-[leave]:ease-in"
+            >
+              {({ close }) => <SuperAdminProfilePopup onClose={close} />}
+            </PopoverPanel>
+          </Popover>
         </div>
       </div>
 
       {/* Notice Modal */}
-      <Transition show={noticeOpen} as={Fragment}>
+      <Transition show={noticeOpen}>
         <Dialog
-          as="div"
-          className="fixed inset-0 z-50 flex items-center justify-center"
           onClose={() => setNoticeOpen(false)}
+          className="relative z-50 shadow-2xl"
         >
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="absolute inset-0 bg-black/30" />
-          </Transition.Child>
+          <DialogBackdrop
+            transition
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          />
+          <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+              <TransitionChild>
+                <DialogPanel
+                  transition
+                  className="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-lg data-[closed]:sm:scale-95"
+                >
+                  <form onSubmit={handleSendNotice} className="p-8">
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                             <FiFile size={20} />
+                          </div>
+                          <DialogTitle className="text-xl font-black text-slate-800 tracking-tight">System Notice</DialogTitle>
+                       </div>
+                       <button type="button" onClick={() => setNoticeOpen(false)} className="text-slate-400 hover:text-slate-600 transition"><X size={20} /></button>
+                    </div>
 
-          <Transition.Child
-            as={Fragment}
-            enter="transform transition ease-out duration-200"
-            enterFrom="scale-90 opacity-0"
-            enterTo="scale-100 opacity-100"
-            leave="transform transition ease-in duration-150"
-            leaveFrom="scale-100 opacity-100"
-            leaveTo="scale-90 opacity-0"
-          >
-            <div className="relative w-full max-w-lg p-6 bg-white shadow-lg rounded-xl">
-              <h2 className="mb-4 text-lg font-semibold">Create Notice</h2>
-
-              <form className="space-y-4" onSubmit={handleSendNotice}>
-                <div>
-                  <label className="block mb-1 font-medium">Title</label>
-                  <input
-                    type="text"
-                    value={noticeTitle}
-                    onChange={(e) => setNoticeTitle(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-medium">Message</label>
-                  <textarea
-                    value={noticeMessage}
-                    onChange={(e) => setNoticeMessage(e.target.value)}
-                    className="w-full h-24 px-3 py-2 border rounded-md outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-medium">Send to Organizations</label>
-                  <div className="flex flex-col p-2 overflow-y-auto border rounded-md max-h-40">
-                    {organizations.map((org) => (
-                      <label key={org.id} className="flex items-center gap-2">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Notice Title</label>
                         <input
-                          type="checkbox"
-                          checked={selectedOrgs.includes(org.id)}
-                          onChange={() => toggleOrg(org.id)}
+                          type="text"
+                          value={noticeTitle}
+                          onChange={(e) => setNoticeTitle(e.target.value)}
+                          placeholder="Broadcast Heading..."
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
                         />
-                        {org.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                      </div>
 
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-gray-100 rounded-md"
-                    onClick={() => setNoticeOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-white bg-blue-600 rounded-md"
-                  >
-                    Send
-                  </button>
-                </div>
-              </form>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Message Content</label>
+                        <textarea
+                          value={noticeMessage}
+                          onChange={(e) => setNoticeMessage(e.target.value)}
+                          placeholder="Type your announcement here..."
+                          className="w-full h-32 px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Target Organizations</label>
+                        <div className="grid grid-cols-1 gap-2 p-4 bg-slate-50 rounded-2xl max-h-40 overflow-y-auto custom-scrollbar">
+                          {organizations.map((org) => (
+                            <label key={org.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-xl transition cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={selectedOrgs.includes(org.id)}
+                                onChange={() => toggleOrg(org.id)}
+                                className="w-4 h-4 rounded border-slate-200 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-600 transition">{org.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-end gap-3">
+                      <button
+                        type="button"
+                        className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition"
+                        onClick={() => setNoticeOpen(false)}
+                      >
+                        Discard
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                      >
+                        <Send size={14} /> Send Broadcast
+                      </button>
+                    </div>
+                  </form>
+                </DialogPanel>
+              </TransitionChild>
             </div>
-          </Transition.Child>
+          </div>
         </Dialog>
       </Transition>
 
       {/* Email Modal */}
-      <Transition show={emailOpen} as={Fragment}>
+      <Transition show={emailOpen}>
         <Dialog
-          as="div"
-          className="fixed inset-0 z-50 flex items-center justify-center"
           onClose={() => setEmailOpen(false)}
+          className="relative z-50"
         >
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="absolute inset-0 bg-black/30" />
-          </Transition.Child>
-
-          <Transition.Child
-            as={Fragment}
-            enter="transform transition ease-out duration-200"
-            enterFrom="scale-90 opacity-0"
-            enterTo="scale-100 opacity-100"
-            leave="transform transition ease-in duration-150"
-            leaveFrom="scale-100 opacity-100"
-            leaveTo="scale-90 opacity-0"
-          >
-            <div className="relative w-full max-w-md p-6 bg-white shadow-lg rounded-xl">
-              <h2 className="mb-4 text-lg font-semibold">Send Email</h2>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  alert("Email sent successfully (Demo)");
-                  setEmailOpen(false);
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block mb-1 text-sm font-medium">To</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full px-3 py-2 border rounded-md outline-none"
-                    placeholder="receiver@example.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Subject</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-3 py-2 border rounded-md outline-none"
-                    placeholder="Email subject"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Message</label>
-                  <textarea
-                    required
-                    className="w-full h-24 px-3 py-2 border rounded-md outline-none"
-                    placeholder="Type your message..."
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md"
-                    onClick={() => setEmailOpen(false)}
+          <DialogBackdrop
+            transition
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          />
+          <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+              <TransitionChild>
+                <DialogPanel
+                  transition
+                  className="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-md data-[closed]:sm:scale-95"
+                >
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      alert("Email sent successfully (Demo)");
+                      setEmailOpen(false);
+                    }}
+                    className="p-8"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-white bg-blue-600 rounded-md"
-                  >
-                    Send
-                  </button>
-                </div>
-              </form>
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                             <Mail size={20} />
+                          </div>
+                          <DialogTitle className="text-xl font-black text-slate-800 tracking-tight">Send Email</DialogTitle>
+                       </div>
+                       <button type="button" onClick={() => setEmailOpen(false)} className="text-slate-400 hover:text-slate-600 transition"><X size={20} /></button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Recipient Email</label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="receiver@example.com"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Subject</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Communication Subject..."
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Message body</label>
+                        <textarea
+                          required
+                          placeholder="Write your secure message..."
+                          className="w-full h-32 px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-end gap-3">
+                      <button
+                        type="button"
+                        className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition"
+                        onClick={() => setEmailOpen(false)}
+                      >
+                        Discard
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                      >
+                        <Send size={14} /> Send Email
+                      </button>
+                    </div>
+                  </form>
+                </DialogPanel>
+              </TransitionChild>
             </div>
-          </Transition.Child>
+          </div>
         </Dialog>
       </Transition>
 
       {/* Notification Drawer */}
-      <Transition show={notifOpen} as={Fragment}>
+      <Transition show={notifOpen}>
         <Dialog
-          as="div"
-          className="fixed inset-0 z-50 overflow-hidden"
           onClose={() => setNotifOpen(false)}
+          className="relative z-50"
         >
-          <div className="absolute inset-0 overflow-hidden">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-200"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="ease-in duration-150"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <div className="absolute inset-0 bg-black/30" />
-            </Transition.Child>
-
-            <div className="absolute inset-y-0 right-0 flex w-screen max-w-sm">
-              <Transition.Child
-                as={Fragment}
-                enter="transform transition ease-out duration-200"
-                enterFrom="translate-x-full"
-                enterTo="translate-x-0"
-                leave="transform transition ease-in duration-150"
-                leaveFrom="translate-x-0"
-                leaveTo="translate-x-full"
-              >
-                <div className="w-full p-6 bg-white shadow-xl">
-                  <h2 className="mb-4 text-lg font-semibold">Admin Feedbacks</h2>
-
-                  <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                    {feedbacks.length === 0 ? (
-                      <div className="text-gray-500">No feedbacks</div>
-                    ) : (
-                      feedbacks.map((fb) => (
-                        <div key={fb.id} className="p-3 bg-gray-100 rounded-md">
-                          <div className="text-sm font-semibold">{fb.senderName}</div>
-                          <div className="mb-1 text-xs text-gray-500">{fb.organizationName}</div>
-                          <div className="text-sm">{fb.message}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <button
-                    className="mt-4 text-blue-600"
-                    onClick={() => setNotifOpen(false)}
+          <DialogBackdrop
+            transition
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          />
+          <div className="fixed inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <TransitionChild>
+                  <DialogPanel
+                    transition
+                    className="pointer-events-auto w-screen max-w-sm transform transition duration-500 ease-in-out data-[closed]:translate-x-full sm:duration-700"
                   >
-                    Close
-                  </button>
-                </div>
-              </Transition.Child>
+                    <div className="flex h-full flex-col overflow-y-hidden bg-white shadow-2xl rounded-l-[3rem]">
+                       <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                                <Bell size={20} />
+                             </div>
+                             <DialogTitle className="text-xl font-black text-slate-800 tracking-tight">Feedbacks</DialogTitle>
+                          </div>
+                          <button onClick={() => setNotifOpen(false)} className="text-slate-400 hover:text-slate-600 transition"><X size={20} /></button>
+                       </div>
+
+                       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                          {feedbacks.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                               <AlertCircle size={40} className="mb-4" />
+                               <p className="text-xs font-bold uppercase tracking-widest">No feedbacks yet</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {feedbacks.map((fb) => (
+                                <div key={fb.id} className="p-5 bg-slate-50 border border-slate-100 rounded-3xl hover:bg-white hover:shadow-lg hover:shadow-indigo-50 transition duration-300 group">
+                                  <div className="flex flex-col gap-1 mb-2">
+                                     <span className="text-sm font-black text-slate-800 tracking-tight">{fb.senderName}</span>
+                                     <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest group-hover:text-amber-500 transition">@ {fb.organizationName}</span>
+                                  </div>
+                                  <p className="text-xs text-slate-600 leading-relaxed font-medium">{fb.message}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                       </div>
+
+                       <div className="p-8 border-t border-slate-100">
+                          <button
+                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-indigo-600 transition shadow-lg shadow-slate-200"
+                            onClick={() => setNotifOpen(false)}
+                          >
+                            Close Notifications
+                          </button>
+                       </div>
+                    </div>
+                  </DialogPanel>
+                </TransitionChild>
+              </div>
             </div>
           </div>
         </Dialog>

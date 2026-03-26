@@ -98,7 +98,7 @@ const RemoveParticipant = () => {
 
   return (
     <div className="relative p-6 bg-gray-100 rounded-lg shadow-md">
-      <ToastContainer position="top-right" autoClose={2000} />
+      <ToastContainer position="top-right pt-8" autoClose={2000} />
 
       <h2 className="mb-6 text-2xl font-semibold text-center text-gray-800">Removed Participants</h2>
 
@@ -122,7 +122,7 @@ const RemoveParticipant = () => {
       {/* Table */}
       <div className="overflow-x-auto bg-white">
         <table className="min-w-full border border-gray-200 rounded-lg">
-          <thead className="bg-orange-200">
+          <thead className="bg-slate-200">
             <tr>
               {[
                 "Sr.", "Group Name", "Name", "Email", "Mobile", "Status", "Date of Join", "Created On", "Removed On", "Removed By",

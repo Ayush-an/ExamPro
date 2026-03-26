@@ -1,7 +1,10 @@
-import { Fragment, useState } from "react";
-import { Dialog, Transition } from "@headlessui/react";
+// src/components/CreateAdmin.jsx
+
+import { useState } from "react";
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle, Transition, TransitionChild } from "@headlessui/react";
 import { Country, State } from "country-state-city";
 import { createAdmin } from "../../../utils/api";
+import { X, Building2, UserPlus, MapPin, Phone, Lock, ChevronDown, Rocket } from "lucide-react";
 
 export default function CreateAdmin({ open, onClose, onCreated }) {
   const [loading, setLoading] = useState(false);
@@ -93,152 +96,184 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
   };
 
   return (
-    <Transition appear show={open} as={Fragment}>
-      <Dialog as="div" className="fixed inset-0 z-50" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-200"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-150"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/40" />
-        </Transition.Child>
+    <Transition show={open}>
+      <Dialog onClose={onClose} className="relative z-50">
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        />
 
-        <div className="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
-          >
-            <Dialog.Panel className="w-full max-w-3xl p-6 bg-white shadow-xl rounded-2xl">
-              <Dialog.Title className="mb-4 text-xl font-semibold">
-                Create Admin & Organization
-              </Dialog.Title>
+        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <TransitionChild>
+              <DialogPanel
+                transition
+                className="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-3xl data-[closed]:sm:scale-95"
+              >
+                <form onSubmit={handleSubmit} className="bg-white p-8 sm:p-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                        <UserPlus size={24} />
+                      </div>
+                      <div>
+                        <DialogTitle as="h3" className="text-2xl font-black text-slate-800 tracking-tight">
+                          Provision New Tenant
+                        </DialogTitle>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Register Organization & Primary Admin</p>
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={onClose}
+                      className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
 
-              <form className="grid grid-cols-2 gap-4" onSubmit={handleSubmit}>
-                {/* Organization Fields */}
-                <input
-                  name="organizationName"
-                  placeholder="Organization Name"
-                  value={form.organizationName}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                  required
-                />
-                <input
-                  name="organizationEmail"
-                  type="email"
-                  placeholder="Organization Email"
-                  value={form.organizationEmail}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                  required
-                />
-                <select
-                  name="country"
-                  value={form.country}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                  required
-                >
-                  <option value="">Select Country</option>
-                  {countries.map((c) => (
-                    <option key={c.isoCode} value={c.isoCode}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="state"
-                  value={form.state}
-                  onChange={handleChange}
-                  disabled={!form.country}
-                  className="p-3 border rounded"
-                  required={!!form.country}
-                >
-                  <option value="">Select State</option>
-                  {states.map((s) => (
-                    <option key={s.isoCode} value={s.isoCode}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  name="phone"
-                  placeholder="Organization Phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                />
-                <input
-                  name="address"
-                  placeholder="Organization Address"
-                  value={form.address}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                />
+                  <div className="space-y-8">
+                    {/* Organization Section */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 border-l-4 border-indigo-600 pl-3">
+                        <Building2 size={16} className="text-indigo-600" />
+                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Organization Profile</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input
+                          name="organizationName"
+                          placeholder="Legal Entity Name"
+                          value={form.organizationName}
+                          onChange={handleChange}
+                          className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                          required
+                        />
+                        <input
+                          name="organizationEmail"
+                          type="email"
+                          placeholder="Corporate Email"
+                          value={form.organizationEmail}
+                          onChange={handleChange}
+                          className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                          required
+                        />
+                        <div className="relative">
+                           <select
+                              name="country"
+                              value={form.country}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition appearance-none pr-10"
+                              required
+                           >
+                              <option value="">Choose Country</option>
+                              {countries.map((c) => (
+                                 <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
+                              ))}
+                           </select>
+                           <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                        <div className="relative">
+                           <select
+                              name="state"
+                              value={form.state}
+                              onChange={handleChange}
+                              disabled={!form.country}
+                              className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition appearance-none pr-10 disabled:opacity-50"
+                              required={!!form.country}
+                           >
+                              <option value="">Choose State</option>
+                              {states.map((s) => (
+                                 <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
+                              ))}
+                           </select>
+                           <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <input
+                              name="phone"
+                              placeholder="Business Contact Number"
+                              value={form.phone}
+                              onChange={handleChange}
+                              className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                           />
+                           <input
+                              name="address"
+                              placeholder="Headquarters Address"
+                              value={form.address}
+                              onChange={handleChange}
+                              className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                           />
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Admin Fields */}
-                <input
-                  name="adminName"
-                  placeholder="Admin Name"
-                  value={form.adminName}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                  required
-                />
-                <input
-                  name="adminEmail"
-                  type="email"
-                  placeholder="Admin Email"
-                  value={form.adminEmail}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                  required
-                />
-                <input
-                  name="adminMobile"
-                  placeholder="Admin Mobile"
-                  value={form.adminMobile}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                />
-                <input
-                  name="adminPassword"
-                  type="text"
-                  placeholder="Admin Password"
-                  value={form.adminPassword}
-                  onChange={handleChange}
-                  className="p-3 border rounded"
-                  required
-                />
+                    {/* Admin Section */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 border-l-4 border-emerald-500 pl-3">
+                        <Lock size={16} className="text-emerald-500" />
+                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Administrative Access</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input
+                          name="adminName"
+                          placeholder="Full Name"
+                          value={form.adminName}
+                          onChange={handleChange}
+                          className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                          required
+                        />
+                        <input
+                          name="adminEmail"
+                          type="email"
+                          placeholder="Login Email (System ID)"
+                          value={form.adminEmail}
+                          onChange={handleChange}
+                          className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                          required
+                        />
+                        <input
+                          name="adminMobile"
+                          placeholder="Personal Mobile"
+                          value={form.adminMobile}
+                          onChange={handleChange}
+                          className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                        />
+                        <input
+                          name="adminPassword"
+                          type="text"
+                          placeholder="Access Password"
+                          value={form.adminPassword}
+                          onChange={handleChange}
+                          className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="flex justify-end col-span-2 gap-2 mt-3">
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-gray-300 rounded"
-                    onClick={onClose}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-2 text-white bg-blue-600 rounded"
-                  >
-                    {loading ? "Creating..." : "Create Admin"}
-                  </button>
-                </div>
-              </form>
-            </Dialog.Panel>
-          </Transition.Child>
+                  <div className="mt-10 flex flex-col sm:flex-row justify-end gap-3">
+                    <button
+                      type="button"
+                      className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition"
+                      onClick={onClose}
+                    >
+                      Cancel Provision
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 sm:flex-none px-12 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-indigo-600 disabled:bg-slate-300 transition shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      ) : <Rocket size={16} />}
+                      {loading ? "Provisioning..." : "Execute Provision"}
+                    </button>
+                  </div>
+                </form>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
         </div>
       </Dialog>
     </Transition>

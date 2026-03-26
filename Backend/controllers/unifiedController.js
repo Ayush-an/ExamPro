@@ -1,7 +1,7 @@
 const {
-    Exam, ExamGroup, Group, GroupMember, Question, QuestionOption,
+    Exam, ExamGroup, ExamQuestion, Group, GroupMember, Question, QuestionOption,
     Notice, Feedback, Assignment, Result, Answer, ExamAttempt,
-    User, Role, UserRole, StagingParticipant
+    User, Role, UserRole, StagingParticipant, Category, Topic
 } = require('../models');
 const { Op } = require('sequelize');
 const multer = require('multer');
@@ -26,19 +26,26 @@ exports.getExams = async (req, res) => {
                 organization_id: req.user.organization_id,
                 removed_at: null
             },
-            include: [{ model: Group, through: { attributes: [] } }],
+            include: [
+                { model: Group, through: { attributes: [] } },
+                { model: User, as: 'Creator', attributes: ['full_name'] }
+            ],
             order: [['created_at', 'DESC']]
         });
         res.json({ exams });
     } catch (err) {
-        console.error('getExams:', err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('getExams Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
 exports.createExam = async (req, res) => {
     try {
-        const { title, description, duration_minutes, duration, groupIds, group_id, start_date, end_date, scheduled, status, status_code } = req.body;
+        const { 
+            title, description, duration_minutes, duration, groupIds, group_id, 
+            start_date, end_date, scheduled, status, status_code,
+            max_questions, max_marks, category_id, topic_id
+        } = req.body;
         const examCode = generateBatchCode();
 
         // Determine status: if scheduled with dates, set SCHEDULED; otherwise ACTIVE
@@ -55,7 +62,11 @@ exports.createExam = async (req, res) => {
             exam_code: examCode,
             start_date: start_date || null,
             end_date: end_date || null,
-            created_by: req.user.id
+            created_by: req.user.id,
+            max_questions: parseInt(max_questions) || 0,
+            max_marks: parseInt(max_marks) || 0,
+            category_id: category_id || null,
+            topic_id: topic_id || null
         });
 
         // Support multiple groupIds
@@ -87,7 +98,11 @@ exports.updateExam = async (req, res) => {
         });
         if (!exam) return res.status(404).json({ error: 'Exam not found' });
 
-        const { title, description, duration_minutes, duration, status, status_code, start_date, end_date, groupIds, selectedGroups } = req.body;
+        const { 
+            title, description, duration_minutes, duration, status, status_code, 
+            start_date, end_date, groupIds, selectedGroups,
+            max_questions, max_marks, category_id, topic_id
+        } = req.body;
 
         // Build update object with only allowed fields
         const updateData = {};
@@ -97,6 +112,10 @@ exports.updateExam = async (req, res) => {
         if (status_code !== undefined || status !== undefined) updateData.status_code = status_code || status;
         if (start_date !== undefined) updateData.start_date = start_date;
         if (end_date !== undefined) updateData.end_date = end_date;
+        if (max_questions !== undefined) updateData.max_questions = parseInt(max_questions) || 0;
+        if (max_marks !== undefined) updateData.max_marks = parseInt(max_marks) || 0;
+        if (category_id !== undefined) updateData.category_id = category_id;
+        if (topic_id !== undefined) updateData.topic_id = topic_id;
 
         await exam.update(updateData);
 
@@ -155,13 +174,16 @@ exports.getRemovedExams = async (req, res) => {
     try {
         const exams = await Exam.findAll({
             where: { organization_id: req.user.organization_id, removed_at: { [Op.ne]: null } },
-            include: [{ model: Group, through: { attributes: [] } }],
+            include: [
+                { model: Group, through: { attributes: [] } },
+                { model: User, as: 'Creator', attributes: ['full_name'] }
+            ],
             order: [['created_at', 'DESC']]
         });
         res.json(exams);
     } catch (err) {
-        console.error('getRemovedExams:', err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('getRemovedExams Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -254,12 +276,32 @@ exports.getGroups = async (req, res) => {
     try {
         const orgId = req.query.organizationId || req.user.organization_id;
         const groups = await Group.findAll({
-            where: { organization_id: orgId, status_code: { [Op.ne]: 'REMOVED' } }
+            where: { organization_id: orgId, status_code: { [Op.ne]: 'REMOVED' } },
+            include: [
+                { model: GroupMember, attributes: ['id'] },
+                { model: User, attributes: ['full_name'] }
+            ],
+            order: [['created_at', 'DESC']]
         });
-        res.json(groups);
+        const mapped = groups.map(g => {
+            const raw = g.toJSON();
+            return {
+                id: raw.id,
+                name: raw.name,
+                description: raw.description,
+                status: raw.status_code,
+                start: raw.start_date || '',
+                end: raw.end_date || '',
+                createdAt: raw.created_at,
+                updatedAt: raw.updated_at,
+                createdBy: raw.User ? raw.User.full_name : 'Unknown',
+                participants: raw.GroupMembers ? raw.GroupMembers.length : 0,
+            };
+        });
+        res.json(mapped);
     } catch (err) {
-        console.error('getGroups:', err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('getGroups Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -310,10 +352,227 @@ exports.deleteGroup = async (req, res) => {
             where: { id, organization_id: req.user.organization_id }
         });
         if (!group) return res.status(404).json({ error: 'Group not found' });
-        await group.update({ status_code: 'REMOVED' });
+        
+        await group.update({ 
+            status_code: 'REMOVED',
+            removed_at: new Date(),
+            removed_by: req.user.id
+        });
+        
         res.json({ message: 'Group removed' });
     } catch (err) {
-        console.error('deleteGroup:', err);
+        console.error('deleteGroup Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// CATEGORY ENDPOINTS
+// ═══════════════════════════════════════════════════════════════
+
+exports.getCategories = async (req, res) => {
+    try {
+        const orgId = req.user.organization_id;
+        // Filter out REMOVED and only show active ones for the org (or system categories with orgId 1)
+        const where = req.user.role === 'SUPERADMIN' 
+            ? { status_code: { [Op.ne]: 'REMOVED' } } 
+            : { organization_id: [orgId, 1], status_code: { [Op.ne]: 'REMOVED' } };
+        
+        const categories = await Category.findAll({
+            where,
+            order: [['created_at', 'DESC']]
+        });
+        res.json(categories);
+    } catch (err) {
+        console.error('getCategories:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.createCategory = async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        const orgId = req.user.organization_id;
+
+        // Prevent duplicates for the same organization
+        const existing = await Category.findOne({
+            where: { 
+                name: name.trim(), 
+                organization_id: orgId 
+            }
+        });
+
+        if (existing) {
+            return res.status(400).json({ error: 'Category with this name already exists' });
+        }
+
+        const category = await Category.create({
+            organization_id: orgId,
+            name: name.trim(),
+            description: description || null,
+        });
+        res.json({ message: 'Category created', category });
+    } catch (err) {
+        console.error('createCategory:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.updateCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, status_code } = req.body;
+        const category = await Category.findOne({
+            where: { id, organization_id: req.user.organization_id }
+        });
+        if (!category) return res.status(404).json({ error: 'Category not found' });
+        await category.update({
+            name: name || category.name,
+            description: description !== undefined ? description : category.description,
+            status_code: status_code || category.status_code
+        });
+        res.json({ message: 'Category updated', category });
+    } catch (err) {
+        console.error('updateCategory:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.deleteCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const category = await Category.findOne({
+            where: { id, organization_id: req.user.organization_id }
+        });
+        if (!category) return res.status(404).json({ error: 'Category not found' });
+        await category.update({ status_code: 'REMOVED' });
+        res.json({ message: 'Category removed' });
+    } catch (err) {
+        console.error('deleteCategory:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getRemovedCategories = async (req, res) => {
+    try {
+        const orgId = req.user.organization_id;
+        const categories = await Category.findAll({
+            where: { organization_id: orgId, status_code: 'REMOVED' },
+            order: [['updated_at', 'DESC']]
+        });
+        res.json(categories);
+    } catch (err) {
+        console.error('getRemovedCategories:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// TOPIC ENDPOINTS
+// ═══════════════════════════════════════════════════════════════
+
+exports.getTopics = async (req, res) => {
+    try {
+        const orgId = req.user.organization_id;
+        const { category_id } = req.query;
+        
+        // Filter out REMOVED
+        const where = req.user.role === 'SUPERADMIN' 
+            ? { status_code: { [Op.ne]: 'REMOVED' } } 
+            : { organization_id: [orgId, 1], status_code: { [Op.ne]: 'REMOVED' } };
+            
+        if (category_id) where.category_id = category_id;
+
+        const topics = await Topic.findAll({
+            where,
+            include: [{ model: Category, attributes: ['name'] }],
+            order: [['created_at', 'DESC']]
+        });
+        res.json(topics);
+    } catch (err) {
+        console.error('getTopics:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.createTopic = async (req, res) => {
+    try {
+        const { category_id, name, description } = req.body;
+        const orgId = req.user.organization_id;
+
+        // Prevent duplicates in the same category for the same organization
+        const existing = await Topic.findOne({
+            where: { 
+                name: name.trim(), 
+                category_id,
+                organization_id: orgId 
+            }
+        });
+
+        if (existing) {
+            return res.status(400).json({ error: 'Topic with this name already exists in this category' });
+        }
+
+        const topic = await Topic.create({
+            organization_id: orgId,
+            category_id,
+            name: name.trim(),
+            description: description || null,
+        });
+        res.json({ message: 'Topic created', topic });
+    } catch (err) {
+        console.error('createTopic:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.updateTopic = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { category_id, name, description, status_code } = req.body;
+        const topic = await Topic.findOne({
+            where: { id, organization_id: req.user.organization_id }
+        });
+        if (!topic) return res.status(404).json({ error: 'Topic not found' });
+        await topic.update({
+            category_id: category_id || topic.category_id,
+            name: name || topic.name,
+            description: description !== undefined ? description : topic.description,
+            status_code: status_code || topic.status_code
+        });
+        res.json({ message: 'Topic updated', topic });
+    } catch (err) {
+        console.error('updateTopic:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.deleteTopic = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const topic = await Topic.findOne({
+            where: { id, organization_id: req.user.organization_id }
+        });
+        if (!topic) return res.status(404).json({ error: 'Topic not found' });
+        await topic.update({ status_code: 'REMOVED' });
+        res.json({ message: 'Topic removed' });
+    } catch (err) {
+        console.error('deleteTopic:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getRemovedTopics = async (req, res) => {
+    try {
+        const orgId = req.user.organization_id;
+        const topics = await Topic.findAll({
+            where: { organization_id: orgId, status_code: 'REMOVED' },
+            include: [{ model: Category, attributes: ['name'] }],
+            order: [['updated_at', 'DESC']]
+        });
+        res.json(topics);
+    } catch (err) {
+        console.error('getRemovedTopics:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -321,12 +580,30 @@ exports.deleteGroup = async (req, res) => {
 exports.getRemovedGroups = async (req, res) => {
     try {
         const groups = await Group.findAll({
-            where: { organization_id: req.user.organization_id, status_code: 'REMOVED' }
+            where: { organization_id: req.user.organization_id, status_code: 'REMOVED' },
+            include: [
+                { model: User, attributes: ['id', 'full_name'], required: false },
+                { model: GroupMember, attributes: ['id'] }
+            ],
+            order: [['updated_at', 'DESC']]
         });
-        res.json(groups);
+        const mapped = groups.map(g => {
+            const raw = g.toJSON();
+            return {
+                id: raw.id,
+                name: raw.name,
+                description: raw.description,
+                status: raw.status_code,
+                createdAt: raw.created_at,
+                updatedAt: raw.updated_at,
+                createdBy: raw.User ? raw.User.full_name : null,
+                participants: raw.GroupMembers ? raw.GroupMembers.length : 0,
+            };
+        });
+        res.json(mapped);
     } catch (err) {
-        console.error('getRemovedGroups:', err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('getRemovedGroups Error:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -350,10 +627,24 @@ exports.getGroupBatches = async (req, res) => {
 exports.getQuestionsByExam = async (req, res) => {
     try {
         const { examId } = req.params;
-        const questions = await Question.findAll({
-            where: { exam_id: examId, organization_id: req.user.organization_id },
-            include: [{ model: QuestionOption }]
+        const exam = await Exam.findByPk(examId, {
+            include: [{
+                model: Question,
+                include: [{ model: QuestionOption }],
+                through: { attributes: ['marks', 'sort_order'] }
+            }]
         });
+        if (!exam) return res.status(404).json({ error: 'Exam not found' });
+        
+        // Map questions to include exam-specific marks from join table
+        const questions = exam.Questions.map(q => {
+            const raw = q.toJSON();
+            return {
+                ...raw,
+                marks: raw.ExamQuestion.marks // Use exam-specific marks
+            };
+        });
+
         res.json(questions);
     } catch (err) {
         console.error('getQuestionsByExam:', err);
@@ -361,12 +652,68 @@ exports.getQuestionsByExam = async (req, res) => {
     }
 };
 
+exports.getAvailableQuestions = async (req, res) => {
+    try {
+        const orgId = req.user.organization_id;
+        const { category_id, topic_id, excludeExamId } = req.query;
+        
+        const where = { organization_id: orgId };
+        if (category_id) where.category_id = category_id;
+        if (topic_id) where.topic_id = topic_id;
+
+        const include = [{ model: QuestionOption }];
+        
+        if (excludeExamId) {
+            // This logic might need refinement depending on if we want to show questions 
+            // already in other exams or just not in THIS exam. 
+            // Requirements say "One question can exist in multiple exams", 
+            // so we probably just want to filter out questions ALREADY in excludeExamId.
+            const assignedIds = (await ExamQuestion.findAll({
+                where: { exam_id: excludeExamId, organization_id: orgId },
+                attributes: ['question_id']
+            })).map(eq => eq.question_id);
+            
+            where.id = { [Op.notIn]: assignedIds };
+        }
+
+        const questions = await Question.findAll({
+            where,
+            include,
+            order: [['created_at', 'DESC']]
+        });
+        res.json(questions);
+    } catch (err) {
+        console.error('getAvailableQuestions:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getQuestions = async (req, res) => {
+    try {
+        const orgId = req.user.organization_id;
+        const questions = await Question.findAll({
+            where: { organization_id: orgId },
+            include: [
+                { model: Category, attributes: ['id', 'name'] },
+                { model: Topic, attributes: ['id', 'name'] },
+                { model: QuestionOption }
+            ],
+            order: [['created_at', 'DESC']]
+        });
+        res.json(questions);
+    } catch (err) {
+        console.error('getQuestions:', err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+};
+
 exports.createQuestion = async (req, res) => {
     try {
-        const { exam_id, question_text, question_type_code, difficulty_code, marks, options } = req.body;
+        const { category_id, topic_id, question_text, question_type_code, difficulty_code, marks, options } = req.body;
         const question = await Question.create({
             organization_id: req.user.organization_id,
-            exam_id,
+            category_id,
+            topic_id,
             question_text,
             question_type_code: question_type_code || 'MCQ',
             difficulty_code: difficulty_code || 'MEDIUM',
@@ -375,13 +722,15 @@ exports.createQuestion = async (req, res) => {
         });
         if (options && Array.isArray(options)) {
             for (let i = 0; i < options.length; i++) {
-                await QuestionOption.create({
-                    organization_id: req.user.organization_id,
-                    question_id: question.id,
-                    option_text: options[i].text || options[i].option_text,
-                    is_correct: options[i].is_correct || false,
-                    sort_order: i
-                });
+                if (options[i].text || options[i].option_text) {
+                    await QuestionOption.create({
+                        organization_id: req.user.organization_id,
+                        question_id: question.id,
+                        option_text: options[i].text || options[i].option_text,
+                        is_correct: options[i].is_correct || false,
+                        sort_order: i
+                    });
+                }
             }
         }
         const created = await Question.findByPk(question.id, {
@@ -396,8 +745,8 @@ exports.createQuestion = async (req, res) => {
 
 exports.uploadQuestions = async (req, res) => {
     try {
-        const { examId } = req.params;
         if (!req.file) return res.status(400).json({ error: 'Please upload a file' });
+        const orgId = req.user.organization_id;
 
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
@@ -405,25 +754,56 @@ exports.uploadQuestions = async (req, res) => {
         let count = 0;
 
         for (const row of data) {
+            // Find or create Category
+            const catName = row.Category || row.category_name;
+            if (!catName) continue; // Category is mandatory
+
+            let [category] = await Category.findOrCreate({
+                where: { name: String(catName).trim(), organization_id: orgId }
+            });
+
+            // Find or create Topic
+            const topName = row.Topic || row.topic_name;
+            if (!topName) continue; // Topic is mandatory
+
+            let [topic] = await Topic.findOrCreate({
+                where: { 
+                    name: String(topName).trim(), 
+                    category_id: category.id,
+                    organization_id: orgId 
+                }
+            });
+
+            // Prevent duplicate question text in same topic
+            const existing = await Question.findOne({
+                where: {
+                    organization_id: orgId,
+                    topic_id: topic.id,
+                    question_text: String(row.Question || row.question_text).trim()
+                }
+            });
+            if (existing) continue;
+
             const q = await Question.create({
-                organization_id: req.user.organization_id,
-                exam_id: parseInt(examId),
-                question_text: row.Question || row.question_text || 'No text',
+                organization_id: orgId,
+                category_id: category.id,
+                topic_id: topic.id,
+                question_text: String(row.Question || row.question_text || 'No text').trim(),
                 question_type_code: row.Type || 'MCQ',
                 difficulty_code: row.Difficulty || 'MEDIUM',
-                marks: row.Marks || 1,
-                created_by: req.user.id,
-                upload_batch_id: null
+                marks: parseInt(row.Marks) || 1,
+                created_by: req.user.id
             });
-            // Create options from columns A, B, C, D with Answer marking correct
-            const optionCols = ['A', 'B', 'C', 'D'];
+
+            // Create options A, B, C, D, E (flexible)
+            const optionCols = ['A', 'B', 'C', 'D', 'E'];
             for (let i = 0; i < optionCols.length; i++) {
                 const optText = row[optionCols[i]];
-                if (optText) {
+                if (optText !== undefined && optText !== null && String(optText).trim() !== '') {
                     await QuestionOption.create({
-                        organization_id: req.user.organization_id,
+                        organization_id: orgId,
                         question_id: q.id,
-                        option_text: String(optText),
+                        option_text: String(optText).trim(),
                         is_correct: String(row.Answer || '').toUpperCase() === optionCols[i],
                         sort_order: i
                     });
@@ -434,6 +814,75 @@ exports.uploadQuestions = async (req, res) => {
         res.json({ message: `${count} questions uploaded`, count });
     } catch (err) {
         console.error('uploadQuestions:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.assignQuestionsToExam = async (req, res) => {
+    try {
+        const { examId, questionIds, marksMap } = req.body; // marksMap optional: { qId: marks }
+        const orgId = req.user.organization_id;
+
+        const exam = await Exam.findByPk(examId);
+        if (!exam) return res.status(404).json({ error: 'Exam not found' });
+
+        // Calculate current totals
+        const existingEntries = await ExamQuestion.findAll({ where: { exam_id: examId, organization_id: orgId } });
+        let currentCount = existingEntries.length;
+        let currentMarks = existingEntries.reduce((sum, entry) => sum + entry.marks, 0);
+
+        const newlyAdded = [];
+        for (const qId of questionIds) {
+            // Check if already assigned
+            const exists = await ExamQuestion.findOne({ where: { exam_id: examId, question_id: qId, organization_id: orgId } });
+            if (exists) continue;
+
+            const question = await Question.findByPk(qId);
+            if (!question) continue;
+
+            const qMarks = (marksMap && marksMap[qId]) ? parseInt(marksMap[qId]) : question.marks;
+
+            // Validation against limits
+            if (exam.max_questions > 0 && currentCount + 1 > exam.max_questions) {
+                return res.status(400).json({ error: `Exceeds max questions limit (${exam.max_questions})`, count: currentCount });
+            }
+            if (exam.max_marks > 0 && currentMarks + qMarks > exam.max_marks) {
+                return res.status(400).json({ error: `Exceeds max marks limit (${exam.max_marks})`, currentMarks });
+            }
+
+            await ExamQuestion.create({
+                organization_id: orgId,
+                exam_id: examId,
+                question_id: qId,
+                marks: qMarks,
+                sort_order: currentCount
+            });
+
+            currentCount++;
+            currentMarks += qMarks;
+            newlyAdded.push(qId);
+        }
+
+        res.json({ message: 'Questions assigned', added: newlyAdded.length, currentCount, currentMarks });
+    } catch (err) {
+        console.error('assignQuestionsToExam:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.unassignQuestionFromExam = async (req, res) => {
+    try {
+        const { examId, questionId } = req.body;
+        await ExamQuestion.destroy({ 
+            where: { 
+                exam_id: examId, 
+                question_id: questionId, 
+                organization_id: req.user.organization_id 
+            } 
+        });
+        res.json({ message: 'Question unassigned' });
+    } catch (err) {
+        console.error('unassignQuestionFromExam:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -672,9 +1121,33 @@ exports.getParticipants = async (req, res) => {
 
         const userRoles = await UserRole.findAll({
             where: { role_id: participantRole.id, organization_id: orgId },
-            include: [{ model: User, attributes: { exclude: ['password'] } }]
+            include: [{
+                model: User,
+                attributes: { exclude: ['password'] },
+                where: { status_code: { [Op.ne]: 'REMOVED' } }, // Filter out removed ones
+                include: [{
+                    model: GroupMember,
+                    include: [{ model: Group, attributes: ['id', 'name'] }],
+                    required: false
+                }]
+            }]
         });
-        const participants = userRoles.filter(ur => ur.User).map(ur => ur.User.toJSON());
+        const participants = userRoles.filter(ur => ur.User).map(ur => {
+            const u = ur.User.toJSON();
+            const firstGroup = u.GroupMembers && u.GroupMembers.length > 0 ? u.GroupMembers[0] : null;
+            return {
+                id: u.id,
+                name: u.full_name,
+                email: u.email,
+                mobile: u.mobile,
+                status: u.status_code,
+                groupId: firstGroup ? firstGroup.group_id : null,
+                groupName: firstGroup && firstGroup.Group ? firstGroup.Group.name : null,
+                uploadBatchCode: u.upload_batch_code || null,
+                createdAt: u.created_at,
+                approved: u.approved,
+            };
+        });
         res.json(participants);
     } catch (err) {
         console.error('getParticipants:', err);
@@ -686,7 +1159,11 @@ exports.getParticipantsBatch = async (req, res) => {
     try {
         const { batchCode } = req.params;
         const users = await User.findAll({
-            where: { upload_batch_code: batchCode, organization_id: req.user.organization_id },
+            where: { 
+                upload_batch_code: batchCode, 
+                organization_id: req.user.organization_id,
+                status_code: { [Op.ne]: 'REMOVED' }
+            },
             attributes: { exclude: ['password'] }
         });
         res.json(users);
@@ -734,12 +1211,22 @@ exports.updateParticipant = async (req, res) => {
 exports.deleteParticipant = async (req, res) => {
     try {
         const { id } = req.params;
-        await UserRole.destroy({ where: { user_id: id, organization_id: req.user.organization_id } });
-        await User.destroy({ where: { id, organization_id: req.user.organization_id } });
-        res.json({ message: 'Participant deleted' });
+        const user = await User.findOne({
+            where: { id, organization_id: req.user.organization_id }
+        });
+        if (!user) return res.status(404).json({ error: 'Participant not found' });
+        
+        // Soft delete: Change status to REMOVED, track removal info
+        await user.update({ 
+            status_code: 'REMOVED',
+            removed_at: new Date(),
+            removed_by: req.user.id
+        });
+        
+        res.json({ message: 'Participant removed' });
     } catch (err) {
         console.error('deleteParticipant:', err);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 };
 
@@ -748,12 +1235,44 @@ exports.getRemovedParticipants = async (req, res) => {
         const orgId = req.user.organization_id;
         const users = await User.findAll({
             where: { organization_id: orgId, status_code: 'REMOVED' },
-            attributes: { exclude: ['password'] }
+            attributes: { exclude: ['password'] },
+            include: [
+                {
+                    model: GroupMember,
+                    include: [{ model: Group, attributes: ['id', 'name'] }],
+                    required: false
+                },
+                {
+                    model: User,
+                    as: 'Remover',
+                    attributes: ['full_name'],
+                    required: false
+                }
+            ],
+            order: [['removed_at', 'DESC']]
         });
-        res.json(users);
+        const mapped = users.map(u => {
+            const raw = u.toJSON();
+            const groupMember = raw.GroupMembers && raw.GroupMembers[0];
+            const group = groupMember ? groupMember.Group : null;
+
+            return {
+                id: raw.id,
+                name: raw.full_name,
+                email: raw.email,
+                mobile: raw.mobile,
+                status: raw.status_code,
+                dateOfJoin: raw.created_at,
+                createdAt: raw.created_at,
+                removedAt: raw.removed_at,
+                removedByName: raw.Remover ? raw.Remover.full_name : 'Unknown',
+                groupName: group ? (group.name) : '-'
+            };
+        });
+        res.json({ success: true, data: mapped });
     } catch (err) {
-        console.error('getRemovedParticipants:', err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('getRemovedParticipants Error:', err);
+        res.status(500).json({ success: false, error: 'Server error', details: err.message });
     }
 };
 

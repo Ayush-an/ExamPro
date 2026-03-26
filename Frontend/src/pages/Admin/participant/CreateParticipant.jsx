@@ -59,7 +59,7 @@ export default function CreateParticipant({ onClose, onSuccess }) {
 
   /* ⬇ Download format */
   const downloadFormat = () => {
-    const csv = "Name,Email,Mobile\nJohn Doe,john@example.com,9876543210\n";
+    const csv = "Name,Email,Mobile\nAyush Agrawal,Ayush@example.com,9876543210\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -135,8 +135,8 @@ export default function CreateParticipant({ onClose, onSuccess }) {
 
           {/* ── Group Multi-Select ── */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-              Target Group(s) <span className="text-rose-500">*</span>
+            <label className="block text-xs font-bold text-slate-500 tracking-widest mb-2">
+              Target Group(s)
             </label>
             {groups.length === 0 ? (
               <p className="text-sm text-slate-400 italic">No groups found. Create a group first.</p>
@@ -150,11 +150,10 @@ export default function CreateParticipant({ onClose, onSuccess }) {
                       key={gId}
                       type="button"
                       onClick={() => toggleGroup(gId)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all text-left ${
-                        checked
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all text-left ${checked
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300"
+                        }`}
                     >
                       {checked ? (
                         <CheckSquare className="w-4 h-4 flex-shrink-0 text-indigo-600" />
@@ -208,7 +207,7 @@ export default function CreateParticipant({ onClose, onSuccess }) {
             {/* File name editing + code preview */}
             {selectedFile && (
               <div className="space-y-2 mt-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                <label className="block text-xs font-bold text-slate-500 tracking-widest">
                   File Display Name <span className="text-slate-400 font-normal normal-case">(editable)</span>
                 </label>
                 <div className="flex items-center gap-2">
@@ -241,11 +240,10 @@ export default function CreateParticipant({ onClose, onSuccess }) {
             <button
               onClick={handleUpload}
               disabled={!selectedFile || selectedGroups.length === 0 || uploading}
-              className={`mt-3 w-full py-2.5 text-sm font-bold text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                !selectedFile || selectedGroups.length === 0 || uploading
-                  ? "bg-slate-300"
-                  : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200"
-              }`}
+              className={`mt-3 w-full py-2.5 text-sm font-bold text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed ${!selectedFile || selectedGroups.length === 0 || uploading
+                ? "bg-slate-300"
+                : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200"
+                }`}
             >
               {uploading ? "Uploading…" : "Upload File"}
             </button>
@@ -254,17 +252,17 @@ export default function CreateParticipant({ onClose, onSuccess }) {
           {/* Divider */}
           <div className="flex items-center justify-center gap-4">
             <div className="h-px bg-slate-200 flex-1" />
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">OR Add Manually</span>
+            <span className="text-xs font-bold text-slate-400 tracking-widest">OR Add Manually</span>
             <div className="h-px bg-slate-200 flex-1" />
           </div>
 
           {/* ── Single Participant ── */}
           <form onSubmit={handleCreateSingle} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Full Name</label>
+              <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1.5">Full Name</label>
               <input
                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-800 placeholder-slate-400"
-                placeholder="John Doe"
+                placeholder="e.g. Rohit Sharma"
                 value={name}
                 onChange={(e) => { setName(e.target.value); setSelectedFile(null); }}
                 required
@@ -272,18 +270,18 @@ export default function CreateParticipant({ onClose, onSuccess }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Email Address</label>
+                <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1.5">Email Address</label>
                 <input
                   type="email"
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-800 placeholder-slate-400"
-                  placeholder="john@example.com"
+                  placeholder="rohit@example.com"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setSelectedFile(null); }}
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Mobile Number</label>
+                <label className="block text-xs font-bold text-slate-500 tracking-widest mb-1.5">Mobile Number</label>
                 <input
                   type="text"
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-800 placeholder-slate-400"
@@ -301,11 +299,10 @@ export default function CreateParticipant({ onClose, onSuccess }) {
               <button
                 type="submit"
                 disabled={creating || selectedGroups.length === 0}
-                className={`px-6 py-3 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  creating || selectedGroups.length === 0
-                    ? "bg-slate-300"
-                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200"
-                }`}
+                className={`px-6 py-3 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${creating || selectedGroups.length === 0
+                  ? "bg-slate-300"
+                  : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200"
+                  }`}
               >
                 {creating ? "Creating…" : "Create Account"}
               </button>

@@ -23,32 +23,26 @@ exports.login = async (req, res) => {
             roleCodes.includes('ADMIN') ? 'ADMIN' :
                 roleCodes.includes('SUPERUSER') ? 'SUPERUSER' : 'PARTICIPANT';
 
-        // Check organization subscription status maybe?
-
         const token = jwt.sign(
-            {
-                id: user.id,
-                organization_id: user.organization_id,
-                role: primaryRole
-            },
+            { id: user.id, organization_id: user.organization_id, role: primaryRole },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
 
+        // Fetch full user with organization
+        const fullUser = await User.findByPk(user.id, {
+            attributes: { exclude: ['password'] },
+            include: [{ model: Organization, attributes: ['id', 'name', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code'] }]
+        });
+
         res.json({
             message: 'Login successful',
             token,
-            user: {
-                id: user.id,
-                full_name: user.full_name,
-                email: user.email,
-                role: primaryRole,
-                organization_id: user.organization_id
-            }
+            user: { ...fullUser.toJSON(), role: primaryRole }
         });
 
     } catch (error) {
-        console.error(error);
+        console.error('Login Error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -56,10 +50,12 @@ exports.login = async (req, res) => {
 exports.getMe = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
-            attributes: { exclude: ['password'] }
+            attributes: { exclude: ['password'] },
+            include: [{ model: Organization, attributes: ['id', 'name', 'type_code', 'status_code', 'email', 'phone', 'address', 'city', 'state', 'country', 'zip_code'] }]
         });
         res.json({ user, role: req.user.role });
     } catch (error) {
+        console.error('getMe error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
 import {
-  fetchParticipants,
-  fetchGroups,
+  fetchSuperUserParticipants,
+  fetchSuperUserGroups,
   updateParticipant,
   deleteParticipant,
   fetchUploadedBatches
@@ -55,8 +54,8 @@ const ManageParticipant = () => {
     setLoading(true);
     try {
       const [participantsData, groupsData, batchesData] = await Promise.all([
-        fetchParticipants(),
-        fetchGroups(),
+        fetchSuperUserParticipants(),
+        fetchSuperUserGroups(),
         fetchUploadedBatches()
       ]);
 
@@ -159,18 +158,18 @@ const ManageParticipant = () => {
     <div className="space-y-8 animate-in fade-in duration-500 text-left">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-50">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Entity Master Registry</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Cross-unit participant oversight</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Participants</h2>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">Manage all organization participants.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative group">
             <select
-              className="appearance-none pl-10 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:bg-white focus:border-indigo-100 transition-all cursor-pointer min-w-[200px]"
+              className="appearance-none pl-10 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none focus:bg-white focus:border-indigo-100 transition-all cursor-pointer min-w-[200px]"
               value={groupFilter}
               onChange={(e) => setGroupFilter(e.target.value)}
             >
-              <option value="">All Operational Units</option>
+              <option value="">All Groups</option>
               {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
             <Layers size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -179,11 +178,11 @@ const ManageParticipant = () => {
 
           <div className="relative group">
             <select
-              className="appearance-none pl-10 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:bg-white focus:border-indigo-100 transition-all cursor-pointer min-w-[200px]"
+              className="appearance-none pl-10 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none focus:bg-white focus:border-indigo-100 transition-all cursor-pointer min-w-[200px]"
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
             >
-              <option value="">All Provisioning Batches</option>
+              <option value="">All Batches</option>
               {batchCodes.map((b, i) => <option key={i} value={b.uploadBatchCode}>{b.uploadBatchCode}</option>)}
             </select>
             <Archive size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -194,10 +193,10 @@ const ManageParticipant = () => {
             <Search size={16} className="text-slate-400" />
             <input
               type="text"
-              placeholder="Search identity matrix..."
+              placeholder="Search participants..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest placeholder:text-slate-300 w-full"
+              className="bg-transparent border-none outline-none text-[10px] font-bold placeholder:text-slate-300 w-full"
             />
           </div>
         </div>
@@ -207,12 +206,12 @@ const ManageParticipant = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entity Identity</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol Group</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Batch Origin</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Temporal Log</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Operations</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Participant</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Group</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Batch</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Status</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Date Added</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -221,7 +220,7 @@ const ManageParticipant = () => {
                 <td colSpan="6" className="px-8 py-20 text-center">
                   <div className="flex flex-col items-center gap-4 opacity-20">
                     <Users size={48} className="text-slate-400" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Registry Vacant</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em]">No participants found</p>
                   </div>
                 </td>
               </tr>
@@ -236,14 +235,14 @@ const ManageParticipant = () => {
                       <div>
                         <p className="text-sm font-extrabold text-slate-900 tracking-tight group-hover:text-indigo-600 transition">{p.name}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter"><Mail size={10} /> {p.email}</span>
-                          <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter"><Phone size={10} /> {p.mobile}</span>
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 tracking-tighter"><Mail size={10} /> {p.email}</span>
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 tracking-tighter"><Phone size={10} /> {p.mobile}</span>
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="text-[10px] font-bold text-slate-900 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-900 tracking-wide bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
                       {getGroupName(p.groupId)}
                     </span>
                   </td>
@@ -253,7 +252,7 @@ const ManageParticipant = () => {
                     </span>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${p.status === "Approved" || p.status === "Active"
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black tracking-widest border ${p.status === "Approved" || p.status === "Active"
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                         : "bg-amber-50 text-amber-600 border-amber-100"
                       }`}>
@@ -263,7 +262,7 @@ const ManageParticipant = () => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col gap-1">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-2"><Clock size={10} /> {new Date(p.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-2"><Clock size={10} /> {new Date(p.createdAt).toLocaleDateString()}</p>
                       <p className="text-[8px] font-bold text-slate-300 italic">Auth ID: {p.id.slice(0, 8)}...</p>
                     </div>
                   </td>
@@ -290,27 +289,27 @@ const ManageParticipant = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
               <div className="p-10 border-b border-slate-50">
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Entity Profile</h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Identity parameter adjustment</p>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Participant</h2>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">Update participant information.</p>
               </div>
               <div className="p-10 space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Full Name</label>
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Full Name</label>
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Communication Link (Email)</label>
-                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Email Address</label>
+                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Mobile Hub</label>
-                      <input type="text" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">Mobile Number</label>
+                      <input type="text" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Operational Status</label>
-                      <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all appearance-none cursor-pointer">
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">Status</label>
+                      <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all appearance-none cursor-pointer">
                         <option value="Pending">Pending</option>
                         <option value="Approved">Approved</option>
                         <option value="Active">Active</option>
@@ -319,15 +318,15 @@ const ManageParticipant = () => {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Assigned Unit</label>
-                    <select value={formData.groupId} onChange={(e) => setFormData({ ...formData, groupId: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all appearance-none cursor-pointer">
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Assigned Group</label>
+                    <select value={formData.groupId} onChange={(e) => setFormData({ ...formData, groupId: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all appearance-none cursor-pointer">
                       {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                     </select>
                   </div>
                 </div>
                 <div className="flex gap-4 pt-4">
-                  <button onClick={() => setModalOpen(false)} className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-100">Abort</button>
-                  <button onClick={handleEditSave} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-slate-100">Commit Changes</button>
+                  <button onClick={() => setModalOpen(false)} className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 hover:bg-slate-100 transition-all border border-slate-100">Cancel</button>
+                  <button onClick={handleEditSave} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 hover:bg-black transition-all shadow-xl shadow-slate-100">Save Changes</button>
                 </div>
               </div>
             </motion.div>

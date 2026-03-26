@@ -130,8 +130,8 @@ const StagingParticipant = () => {
     <div className="space-y-8 animate-in fade-in duration-500 text-left">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-50">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Provisioning Staging Area</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Temporary storage for entity verification</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Participant Staging</h2>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">Review and verify participants before final import.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -143,9 +143,9 @@ const StagingParticipant = () => {
           </button>
           <button
             onClick={handleExportToExcel}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-bold hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
           >
-            <Download size={14} /> Export Staging
+            <Download size={14} /> Export CSV
           </button>
         </div>
       </div>
@@ -153,14 +153,14 @@ const StagingParticipant = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 p-6 rounded-[32px] border border-slate-50">
         <div className="relative group">
           <select
-            className="w-full appearance-none pl-10 pr-10 py-3 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:border-indigo-100 transition-all cursor-pointer shadow-sm"
+            className="w-full appearance-none pl-10 pr-10 py-3 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold outline-none focus:border-indigo-100 transition-all cursor-pointer shadow-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">Operational Status</option>
+            <option value="">Status</option>
             <option value="Pending">Pending Verification</option>
-            <option value="Approved">Approved Sync</option>
-            <option value="Inactive">Inactive Node</option>
+            <option value="Approved">Approved</option>
+            <option value="Inactive">Inactive</option>
           </select>
           <Shield size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <Filter size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 opacity-40" />
@@ -168,11 +168,11 @@ const StagingParticipant = () => {
 
         <div className="relative group">
           <select
-            className="w-full appearance-none pl-10 pr-10 py-3 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:border-indigo-100 transition-all cursor-pointer shadow-sm"
+            className="w-full appearance-none pl-10 pr-10 py-3 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold outline-none focus:border-indigo-100 transition-all cursor-pointer shadow-sm"
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
           >
-            <option value="">Functional Unit</option>
+            <option value="">Group</option>
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
           <Layers size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -182,7 +182,7 @@ const StagingParticipant = () => {
         <div className="relative group">
           <input
             type="date"
-            className="w-full pl-10 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:border-indigo-100 transition-all shadow-sm"
+            className="w-full pl-10 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold outline-none focus:border-indigo-100 transition-all shadow-sm"
             value={createdFilter}
             onChange={(e) => setCreatedFilter(e.target.value)}
           />
@@ -190,7 +190,7 @@ const StagingParticipant = () => {
         </div>
 
         <div className="flex gap-2">
-          <button onClick={handleApplyFilters} className="flex-1 bg-slate-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all">Apply</button>
+          <button onClick={handleApplyFilters} className="flex-1 bg-slate-900 text-white rounded-2xl text-[10px] font-bold hover:bg-black transition-all">Apply</button>
           <button onClick={handleResetFilters} className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-red-500 transition-all"><X size={18} /></button>
         </div>
       </div>
@@ -198,8 +198,8 @@ const StagingParticipant = () => {
       <div className="relative">
         <input
           type="text"
-          placeholder="Search staging matrix (name, email, mobile)..."
-          className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold uppercase tracking-widest outline-none focus:bg-white focus:border-indigo-100 transition-all shadow-inner"
+          placeholder="Search participants (name, email, mobile)..."
+          className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none focus:bg-white focus:border-indigo-100 transition-all shadow-inner"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -210,11 +210,11 @@ const StagingParticipant = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sr.</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Unit</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entity Signature</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Temporal Log</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">No.</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Group</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Participant</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide text-center">Status</th>
+              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 tracking-wide">Date Added</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -223,7 +223,7 @@ const StagingParticipant = () => {
                 <td colSpan="5" className="px-8 py-20 text-center">
                   <div className="flex flex-col items-center gap-4 opacity-20">
                     <Database size={48} className="text-slate-400" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Staging Area Clear</p>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em]">No participants in staging</p>
                   </div>
                 </td>
               </tr>
@@ -245,12 +245,12 @@ const StagingParticipant = () => {
                       </div>
                       <div>
                         <p className="text-sm font-extrabold text-slate-900 tracking-tight group-hover:text-indigo-600 transition">{p.name}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">{p.email}</p>
+                        <p className="text-[9px] font-bold text-slate-400">{p.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${p.status === "Approved"
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black tracking-widest border ${p.status === "Approved"
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                         : "bg-amber-50 text-amber-600 border-amber-100"
                       }`}>
@@ -260,11 +260,11 @@ const StagingParticipant = () => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-tight">
-                        <Clock size={10} className="text-slate-300" /> Ingested: {new Date(p.createdAt).toLocaleDateString()}
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 tracking-tight">
+                        <Clock size={10} className="text-slate-300" /> Added: {new Date(p.createdAt).toLocaleDateString()}
                       </div>
-                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-tight">
-                        <FileText size={10} className="text-slate-300" /> Signal: {p.id.slice(0, 12)}
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 tracking-tight">
+                        <FileText size={10} className="text-slate-300" /> ID: {p.id.slice(0, 12)}
                       </div>
                     </div>
                   </td>
@@ -277,7 +277,7 @@ const StagingParticipant = () => {
 
       <div className="flex items-center justify-between pt-6">
         <div className="flex items-center gap-3">
-          <div className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200">
+          <div className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black shadow-xl shadow-slate-200">
             {currentPage + 1} <span className="mx-2 opacity-30">/</span> {totalPages || 1}
           </div>
           <div className="flex gap-2">

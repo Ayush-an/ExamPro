@@ -29,6 +29,7 @@ router.get('/exams', adminController.getExams);
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 router.get('/dashboard-stats', adminController.getDashboardStats);
+router.post('/create-superuser', adminController.createSuperUser);
 router.get('/superusers', adminController.getSuperUsers);
 
 // ─── Notices / Feedback ───────────────────────────────────────────────────────

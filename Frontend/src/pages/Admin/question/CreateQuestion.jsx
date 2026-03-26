@@ -1,34 +1,49 @@
-// src/components/question/CreateQuestion.jsx
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  fetchExams, createQuestion, uploadQuestionExcel,
+  fetchCategories, fetchTopics
+} from "../../../utils/api";
 import { toast } from "react-hot-toast";
-import { fetchExams, createQuestion, uploadQuestionExcel, } from "../../../utils/api";
 import * as XLSX from "xlsx";
-import { X, FileQuestion, UploadCloud, FileSpreadsheet, CheckCircle2 } from "lucide-react";
+import { X, FileQuestion, UploadCloud, FileSpreadsheet, CheckCircle2, Layers, Hash, Plus as PlusIcon, Trash } from "lucide-react";
 
 export default function CreateQuestion({ onClose, onCreated }) {
   const fileRef = useRef();
 
   const [exams, setExams] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [excelFile, setExcelFile] = useState(null);
   const [errors, setErrors] = useState({});
   const [uploadStats, setUploadStats] = useState(null);
 
   const [formData, setFormData] = useState({
-    examId: "",
+    examId: "", // Optional now
+    categoryId: "",
+    topicId: "",
     questionText: "",
     options: ["", "", "", ""],
     correctOption: "",
-    difficulty: "",
+    difficulty: "Medium",
     marks: 1,
   });
 
-  /* ---------------- FETCH EXAMS ---------------- */
+  /* ---------------- FETCH DATA ---------------- */
   useEffect(() => {
-    fetchExams()
-      .then(setExams)
-      .catch(() => toast.error("Failed to load exams"));
+    fetchExams().then(setExams).catch(() => toast.error("Failed to load exams"));
+    fetchCategories().then(setCategories).catch(() => toast.error("Failed to load categories"));
   }, []);
+
+  useEffect(() => {
+    if (formData.categoryId) {
+      fetchTopics(formData.categoryId)
+        .then(setTopics)
+        .catch(() => toast.error("Failed to load topics"));
+    } else {
+      setTopics([]);
+    }
+  }, [formData.categoryId]);
 
   /* ---------------- HELPERS ---------------- */
   const fieldClass = (field) =>
@@ -48,29 +63,50 @@ export default function CreateQuestion({ onClose, onCreated }) {
     setFormData({ ...formData, options });
   };
 
+  const addOption = () => {
+    if (formData.options.length < 5) {
+      setFormData({ ...formData, options: [...formData.options, ""] });
+    }
+  };
+
+  const removeOption = (i) => {
+    if (formData.options.length > 2) {
+      const options = formData.options.filter((_, idx) => idx !== i);
+      setFormData({ ...formData, options });
+      if (parseInt(formData.correctOption) === i + 1) {
+        setFormData(prev => ({ ...prev, correctOption: "" }));
+      } else if (parseInt(formData.correctOption) > i + 1) {
+        setFormData(prev => ({ ...prev, correctOption: String(parseInt(prev.correctOption) - 1) }));
+      }
+    }
+  };
+
   /* ---------------- DOWNLOAD TEMPLATE ---------------- */
   const downloadTemplate = () => {
-    if (!formData.examId)
-      return toast.error("Please select exam first");
-
     const data = [
       [
-        "questionText",
-        "option1",
-        "option2",
-        "option3",
-        "option4",
-        "correctOption",
-        "difficulty",
-        "marks",
+        "Category",
+        "Topic",
+        "Question",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Answer",
+        "Difficulty",
+        "Marks",
       ],
       [
-        "What is React?",
-        "Library",
-        "Framework",
-        "Language",
-        "Browser",
-        "1",
+        "Mathematics",
+        "Algebra",
+        "Solve for x: 2x = 10",
+        "5",
+        "2",
+        "8",
+        "10",
+        "",
+        "A",
         "Easy",
         "1",
       ],
@@ -84,18 +120,15 @@ export default function CreateQuestion({ onClose, onCreated }) {
 
   /* ---------------- EXCEL UPLOAD ---------------- */
   const handleExcelUpload = async () => {
-    if (!formData.examId)
-      return toast.error("Please select exam first");
     if (!excelFile) return toast.error("Select Excel file");
 
     setLoading(true);
     setUploadStats(null);
 
     try {
-      await uploadQuestionExcel(formData.examId, excelFile);
-
+      await uploadQuestionExcel(excelFile); // No examId needed for global pool
       setUploadStats({ success: true });
-      toast.success("Questions uploaded successfully");
+      toast.success("Questions uploaded successfully to global pool");
       onCreated?.();
     } catch {
       toast.error("Excel upload failed");
@@ -109,7 +142,8 @@ export default function CreateQuestion({ onClose, onCreated }) {
   /* ---------------- FORM VALIDATION ---------------- */
   const validateForm = () => {
     const err = {};
-    if (!formData.examId) err.examId = true;
+    if (!formData.categoryId) err.categoryId = true;
+    if (!formData.topicId) err.topicId = true;
     if (!formData.questionText) err.questionText = true;
     if (formData.options.some((o) => !o.trim())) err.options = true;
     if (!formData.correctOption) err.correctOption = true;
@@ -128,8 +162,18 @@ export default function CreateQuestion({ onClose, onCreated }) {
 
     setLoading(true);
     try {
-      await createQuestion(formData);
-      toast.success("Question added successfully");
+      await createQuestion({
+        ...formData,
+        category_id: formData.categoryId,
+        topic_id: formData.topicId,
+        question_text: formData.questionText,
+        difficulty_code: formData.difficulty.toUpperCase(),
+        options: formData.options.map((text, i) => ({
+          text,
+          is_correct: parseInt(formData.correctOption) === i + 1
+        }))
+      });
+      toast.success("Question created in global pool");
       onCreated?.();
       onClose?.();
     } catch {
@@ -141,16 +185,16 @@ export default function CreateQuestion({ onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-      <div className="w-full max-w-4xl bg-slate-50 shadow-2xl rounded-[32px] relative max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="w-full max-w-5xl bg-slate-50 shadow-2xl rounded-[32px] relative max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 bg-white border-b border-slate-100 z-10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-              <FileQuestion className="w-6 h-6" />
+              <PlusIcon className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-xl font-extrabold text-slate-900">Add Questions</h2>
-              <p className="text-sm font-medium text-slate-500">Upload in bulk or create manually</p>
+              <p className="text-sm font-medium text-slate-500">Create global questions or upload in bulk</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
@@ -161,35 +205,55 @@ export default function CreateQuestion({ onClose, onCreated }) {
         {/* Body */}
         <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
 
-          {/* Setup / Exam Selection */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">1</span>
-              Select Target Exam
-            </h3>
-            <select
-              name="examId"
-              value={formData.examId}
-              onChange={handleChange}
-              className={fieldClass("examId")}
-            >
-              <option value="">-- Choose Exam --</option>
-              {exams.map((e) => (
-                <option key={e.id} value={e.id}>{e.title}</option>
-              ))}
-            </select>
+          {/* Setup / Category Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+              <h3 className="text-sm font-bold text-slate-900 tracking-widest mb-4 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-500" />
+                Category (Mandatory)
+              </h3>
+              <select
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleChange}
+                className={fieldClass("categoryId")}
+              >
+                <option value="">-- Choose Category --</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+              <h3 className="text-sm font-bold text-slate-900 tracking-widest mb-4 flex items-center gap-2">
+                <Hash className="w-4 h-4 text-indigo-500" />
+                Topic (Mandatory)
+              </h3>
+              <select
+                name="topicId"
+                value={formData.topicId}
+                onChange={handleChange}
+                className={fieldClass("topicId")}
+                disabled={!formData.categoryId}
+              >
+                <option value="">-- Choose Topic --</option>
+                {topics.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Column 1: Bulk Upload */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-11 gap-8">
+            {/* Left: Bulk Upload (40%) */}
+            <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-fit">
+              <h3 className="text-sm font-bold text-slate-900 tracking-widest mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">A</span>
                 Bulk Upload
               </h3>
-              <p className="text-sm text-slate-500 mb-6 flex-1">
-                Download the template, fill in your questions, and upload the Excel file to import multiple questions at once.
+              <p className="text-sm text-slate-500 mb-6 font-medium">
+                Download the template with <span className="font-bold text-slate-700">Category</span> & <span className="font-bold text-slate-700">Topic</span> columns.
               </p>
 
               <div className="space-y-4 w-full">
@@ -225,107 +289,123 @@ export default function CreateQuestion({ onClose, onCreated }) {
               </div>
             </div>
 
-            {/* Column 2: Manual Create */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+            {/* Right: Manual Create (60%) */}
+            <div className="lg:col-span-7 bg-white p-7 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
+              <h3 className="text-sm font-bold text-slate-900 tracking-widest mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs">B</span>
                 Manual Entry
               </h3>
 
-              <div className="space-y-5 flex-1">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Question Text</label>
+                  <label className="block text-xs font-bold text-slate-500  tracking-widest mb-1.5">Question Text</label>
                   <textarea
                     name="questionText"
                     value={formData.questionText}
                     onChange={handleChange}
                     placeholder="Type the question here..."
-                    className={`${fieldClass("questionText")} h-24 resize-none`}
+                    className={`${fieldClass("questionText")} h-28 resize-none`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Options</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-slate-500  tracking-widest">Options (2-5)</label>
+                    {formData.options.length < 5 && (
+                      <button
+                        onClick={addOption}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-2.5 py-1 rounded-full transition"
+                      >
+                        <PlusIcon size={12} /> Add Option
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-3 font-sans">
                     {formData.options.map((o, i) => (
-                      <input
-                        key={i}
-                        value={o}
-                        onChange={(e) => handleOptionChange(i, e.target.value)}
-                        placeholder={`Option ${i + 1}`}
-                        className={`${fieldClass("options")} py-2.5 text-sm`}
-                      />
+                      <div key={i} className="flex items-center gap-3 group">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition ${formData.correctOption === String(i + 1) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
+                          }`}>
+                          {String.fromCharCode(65 + i)}
+                        </div>
+                        <input
+                          value={o}
+                          onChange={(e) => handleOptionChange(i, e.target.value)}
+                          placeholder={`Option ${i + 1}`}
+                          className={`${fieldClass("options")} py-2.5 flex-1`}
+                        />
+                        {formData.options.length > 2 && (
+                          <button
+                            onClick={() => removeOption(i)}
+                            className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                          >
+                            <Trash size={16} />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Correct Option</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {["1", "2", "3", "4"].map((o) => {
-                        const isSelected = formData.correctOption === o;
+                    <label className="block text-xs font-bold text-slate-500 tracking-widest mb-2">Select Correct Answer</label>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.options.map((_, i) => {
+                        const oId = String(i + 1);
+                        const isSelected = formData.correctOption === oId;
                         return (
-                          <label key={o} className={`flex items-center justify-center py-2 rounded-lg cursor-pointer border text-sm font-bold transition-all ${isSelected ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+                          <label key={oId} className={`w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer border font-bold transition-all ${isSelected ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
                             <input
                               type="radio"
                               name="correctOption"
-                              value={o}
+                              value={oId}
                               className="hidden"
                               checked={isSelected}
                               onChange={handleChange}
                             />
-                            {o}
+                            {String.fromCharCode(65 + i)}
                           </label>
                         )
                       })}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Marks</label>
-                    <input
-                      type="number"
-                      min="1"
-                      name="marks"
-                      value={formData.marks}
-                      onChange={handleChange}
-                      className={`${fieldClass("marks")} py-2`}
-                      placeholder="e.g. 1"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Difficulty</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {["Easy", "Medium", "Hard"].map((d) => {
-                      const isSelected = formData.difficulty === d;
-                      const colors = d === 'Easy' ? 'emerald' : d === 'Medium' ? 'amber' : 'rose';
-                      return (
-                        <label key={d} className={`flex items-center justify-center py-2 rounded-lg cursor-pointer border text-sm font-bold transition-all ${isSelected ? `bg-${colors}-50 border-${colors}-500 text-${colors}-700` : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
-                          <input
-                            type="radio"
-                            name="difficulty"
-                            value={d}
-                            className="hidden"
-                            checked={isSelected}
-                            onChange={handleChange}
-                          />
-                          {d}
-                        </label>
-                      )
-                    })}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 tracking-widest mb-2">Marks</label>
+                      <input
+                        type="number"
+                        min="1"
+                        name="marks"
+                        value={formData.marks}
+                        onChange={handleChange}
+                        className={`${fieldClass("marks")} py-2`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 tracking-widest mb-2">Difficulty</label>
+                      <select
+                        name="difficulty"
+                        value={formData.difficulty}
+                        onChange={handleChange}
+                        className={fieldClass("difficulty")}
+                      >
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-8 pt-6 border-t border-slate-100 bg-white">
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !formData.examId}
-                  className="w-full flex items-center justify-center py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  disabled={loading}
+                  className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-200 flex items-center justify-center gap-2"
                 >
-                  {loading && !excelFile ? "Saving..." : "Create Question"}
+                  {loading && !excelFile ? "Creating..." : "Create Question"}
                 </button>
               </div>
             </div>

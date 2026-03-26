@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { fetchGroups, fetchExams, updateExam, deleteExam } from "../../../utils/api";
+import { fetchSuperUserGroups, fetchSuperUserExams, updateExam, deleteSuperUserExam } from "../../../utils/api";
 import {
   FileText,
   Search,
@@ -48,8 +47,8 @@ const ManageExam = () => {
     setLoading(true);
     try {
       const [examsData, groupsData] = await Promise.all([
-        fetchExams(),
-        fetchGroups()
+        fetchSuperUserExams(),
+        fetchSuperUserGroups()
       ]);
       setExams(Array.isArray(examsData) ? examsData : []);
       setGroups(Array.isArray(groupsData.groups) ? groupsData.groups : groupsData);
@@ -94,7 +93,7 @@ const ManageExam = () => {
   const handleSoftDelete = async (id) => {
     if (!window.confirm("Confirm protocol decommissioning?")) return;
     try {
-      await deleteExam(id);
+      await deleteSuperUserExam(id);
       loadData();
       toast.success("Protocol decommissioned");
     } catch (err) {
@@ -110,7 +109,7 @@ const ManageExam = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20 gap-4">
       <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scanning Protocol Network...</p>
+      <p className="text-[10px] font-bold text-slate-400">Loading exams...</p>
     </div>
   );
 
@@ -118,18 +117,18 @@ const ManageExam = () => {
     <div className="space-y-8 animate-in fade-in duration-500 text-left">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-50">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Assessment Protocol Registry</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Institutional protocol oversight</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Exams</h2>
+          <p className="text-[10px] text-slate-400 font-bold mt-1">Manage organization exams and schedules.</p>
         </div>
 
         <div className="flex items-center gap-3 bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 focus-within:bg-white focus-within:border-indigo-100 transition-all w-full md:w-80 shadow-inner">
           <Search size={16} className="text-slate-400" />
           <input
             type="text"
-            placeholder="Search protocol registry..."
+            placeholder="Search exams..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent border-none outline-none text-[10px] font-bold uppercase tracking-widest placeholder:text-slate-300 w-full"
+            className="bg-transparent border-none outline-none text-[10px] font-bold placeholder:text-slate-300 w-full"
           />
         </div>
       </div>
@@ -139,7 +138,7 @@ const ManageExam = () => {
           <div className="col-span-full py-20 text-center bg-white rounded-[40px] border border-slate-50 shadow-sm">
             <div className="flex flex-col items-center gap-4 opacity-20">
               <FileText size={48} className="text-slate-400" />
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Protocol Matrix Vacant</p>
+              <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em]">No exams found</p>
             </div>
           </div>
         ) : (
@@ -159,7 +158,7 @@ const ManageExam = () => {
                 <div className="w-14 h-14 bg-slate-900 rounded-[22px] flex items-center justify-center text-white font-black shadow-xl shadow-slate-200 group-hover:scale-110 transition cursor-pointer">
                   <CheckCircle2 size={24} className="text-indigo-400" />
                 </div>
-                <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${exam.status === "ACTIVE"
+                <span className={`px-4 py-1.5 rounded-full text-[8px] font-black tracking-widest border ${exam.status === "ACTIVE"
                     ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                     : "bg-amber-50 text-amber-600 border-amber-100"
                   }`}>
@@ -169,23 +168,23 @@ const ManageExam = () => {
               </div>
 
               <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2 group-hover:text-indigo-600 transition">{exam.title}</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider line-clamp-2 mb-8 h-10">{exam.description || "Experimental Protocol Baseline"}</p>
+              <p className="text-[10px] text-slate-400 font-bold line-clamp-2 mb-8 h-10">{exam.description || "No description available."}</p>
 
               <div className="space-y-4 mb-8 flex-1">
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-50">
                   <div className="flex items-center gap-3">
                     <Timer size={14} className="text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Duration</span>
+                    <span className="text-[10px] font-bold text-slate-500">Duration</span>
                   </div>
-                  <span className="text-[10px] font-extrabold text-slate-900 uppercase">{exam.duration} Min</span>
+                  <span className="text-[10px] font-extrabold text-slate-900">{exam.duration} Min</span>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-50">
                   <div className="flex items-center gap-3">
                     <Layers size={14} className="text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Unit Access</span>
+                    <span className="text-[10px] font-bold text-slate-500">Group Access</span>
                   </div>
-                  <span className="text-[10px] font-extrabold text-slate-900 uppercase truncate max-w-[120px]">
+                  <span className="text-[10px] font-extrabold text-slate-900 truncate max-w-[120px]">
                     {exam.Groups?.length > 0 ? exam.Groups.map(g => g.name).join(", ") : "Universal"}
                   </span>
                 </div>
@@ -193,9 +192,9 @@ const ManageExam = () => {
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-50">
                   <div className="flex items-center gap-3">
                     <Calendar size={14} className="text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Initialization</span>
+                    <span className="text-[10px] font-bold text-slate-500">Start Date</span>
                   </div>
-                  <span className="text-[10px] font-extrabold text-slate-900 uppercase">
+                  <span className="text-[10px] font-extrabold text-slate-900">
                     {exam.start_date ? new Date(exam.start_date).toLocaleDateString() : "TBD"}
                   </span>
                 </div>
@@ -207,9 +206,9 @@ const ManageExam = () => {
                     ...exam,
                     selectedGroups: exam.Groups?.map((g) => String(g.id)) || [],
                   })}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
                 >
-                  <Edit3 size={14} /> Adjust Parameters
+                  <Edit3 size={14} /> Edit Exam
                 </button>
                 <button
                   onClick={() => handleSoftDelete(exam.id)}
@@ -230,8 +229,8 @@ const ManageExam = () => {
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-xl bg-white rounded-[44px] shadow-2xl border border-slate-100 overflow-hidden">
               <div className="p-10 border-b border-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Protocol Parameters</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Institutional protocol adjustment</p>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Exam</h2>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1">Update exam details and settings.</p>
                 </div>
                 <button onClick={() => setEditingExam(null)} className="p-3 bg-slate-50 rounded-xl text-slate-400 hover:text-red-500 transition"><X size={20} /></button>
               </div>
@@ -239,22 +238,22 @@ const ManageExam = () => {
               <div className="p-10 overflow-y-auto max-h-[70vh] scrollbar-hide space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Protocol Identification</label>
-                    <input type="text" value={editingExam.title || ""} onChange={(e) => handleEditChange("title", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Exam Title</label>
+                    <input type="text" value={editingExam.title || ""} onChange={(e) => handleEditChange("title", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Mission Description</label>
-                    <textarea value={editingExam.description || ""} onChange={(e) => handleEditChange("description", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all min-h-[100px]" />
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Description</label>
+                    <textarea value={editingExam.description || ""} onChange={(e) => handleEditChange("description", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all min-h-[100px]" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Temporal Allocation (Min)</label>
-                      <input type="number" value={editingExam.duration || 0} onChange={(e) => handleEditChange("duration", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">Duration (Min)</label>
+                      <input type="number" value={editingExam.duration || 0} onChange={(e) => handleEditChange("duration", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Operational Status</label>
-                      <select value={editingExam.status || "SCHEDULED"} onChange={(e) => handleEditChange("status", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all appearance-none cursor-pointer">
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">Status</label>
+                      <select value={editingExam.status || "SCHEDULED"} onChange={(e) => handleEditChange("status", e.target.value)} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all appearance-none cursor-pointer">
                         <option value="SCHEDULED">Scheduled</option>
                         <option value="ACTIVE">Active</option>
                         <option value="COMPLETED">Completed</option>
@@ -263,7 +262,7 @@ const ManageExam = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Institutional Unit Access</label>
+                    <label className="text-[10px] font-bold text-slate-400 ml-4">Group Access</label>
                     <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-50 max-h-48 overflow-y-auto grid grid-cols-2 gap-3 scrollbar-hide">
                       {groups.map((g) => {
                         const idStr = String(g.id);
@@ -275,7 +274,7 @@ const ManageExam = () => {
                               updated = isSelected ? updated.filter(v => v !== idStr) : [...updated, idStr];
                               handleEditChange("selectedGroups", updated);
                             }} className="w-4 h-4 rounded border-slate-200 text-indigo-600 focus:ring-0" />
-                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{g.name}</span>
+                            <span className="text-[10px] font-bold text-slate-600">{g.name}</span>
                           </label>
                         );
                       })}
@@ -284,19 +283,19 @@ const ManageExam = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Start Sequence (Local)</label>
-                      <input type="datetime-local" value={isoToLocalInput(editingExam.start_date)} onChange={(e) => handleEditChange("start_date", localInputToIso(e.target.value))} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">Start Date</label>
+                      <input type="datetime-local" value={isoToLocalInput(editingExam.start_date)} onChange={(e) => handleEditChange("start_date", localInputToIso(e.target.value))} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">End Sequence (Local)</label>
-                      <input type="datetime-local" value={isoToLocalInput(editingExam.end_date)} onChange={(e) => handleEditChange("end_date", localInputToIso(e.target.value))} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold uppercase tracking-widest transition-all" />
+                      <label className="text-[10px] font-bold text-slate-400 ml-4">End Date</label>
+                      <input type="datetime-local" value={isoToLocalInput(editingExam.end_date)} onChange={(e) => handleEditChange("end_date", localInputToIso(e.target.value))} className="w-full px-6 py-4 bg-slate-50 border border-slate-50 rounded-2xl focus:bg-white focus:border-indigo-100 outline-none text-[10px] font-bold transition-all" />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-4 pt-4 sticky bottom-0 bg-white">
-                  <button onClick={() => setEditingExam(null)} className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-100">Abort</button>
-                  <button onClick={handleSaveEdit} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-slate-100">Commit Protocol</button>
+                  <button onClick={() => setEditingExam(null)} className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 hover:bg-slate-100 transition-all border border-slate-100">Cancel</button>
+                  <button onClick={handleSaveEdit} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 hover:bg-black transition-all shadow-xl shadow-slate-100">Save Changes</button>
                 </div>
               </div>
             </motion.div>

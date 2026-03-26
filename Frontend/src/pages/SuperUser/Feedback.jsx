@@ -24,7 +24,7 @@ export default function Feedbacks({ onClose }) {
     const loadFeedbacks = async () => {
       setLoading(true);
       try {
-        const data = await fetchFeedbacks();
+        const data = await fetchSuperUserFeedbacks();
         setFeedbacks(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Feedback telemetry failure");

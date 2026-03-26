@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { fetchGroups, uploadAssignment } from "../../utils/api";
+import { fetchSuperUserFeedbacks, uploadSuperUserAssignment } from "../../utils/api";
 import {
   FilePlus,
   Send,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { useState, useEffect } from "react";
 
 export default function Assignments({ onClose }) {
   const [groups, setGroups] = useState([]);
@@ -28,8 +28,8 @@ export default function Assignments({ onClose }) {
   useEffect(() => {
     const loadGroups = async () => {
       try {
-        const allGroups = await fetchGroups();
-        setGroups(allGroups.groups || allGroups || []);
+        const data = await fetchSuperUserGroups();
+        setGroups(data.groups || data || []);
       } catch (err) {
         toast.error("Group telemetry fetch failed");
       }
@@ -57,7 +57,7 @@ export default function Assignments({ onClose }) {
         formData.append("title", title);
         formData.append("description", description);
         formData.append("groupId", groupId);
-        await uploadAssignment(formData);
+        await uploadSuperUserAssignment(formData);
       }
       toast.success("Intelligence mission deployed successfully!");
       if (onClose) onClose();

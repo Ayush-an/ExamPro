@@ -1,6 +1,6 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const sequelize = new Sequelize(
     process.env.DB_NAME,
@@ -53,6 +53,8 @@ const User = sequelize.define('User', {
     details: DataTypes.JSON,
     last_login: DataTypes.DATE,
     upload_batch_code: DataTypes.STRING(50),
+    removed_at: DataTypes.DATE,
+    removed_by: DataTypes.INTEGER,
 }, { tableName: 'users', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
 // 4. Roles
@@ -83,6 +85,11 @@ const UserRole = sequelize.define('UserRole', {
     timestamps: false,
     indexes: [{ unique: true, fields: ['organization_id', 'user_id', 'role_id'] }]
 });
+
+UserRole.belongsTo(User, { foreignKey: 'user_id' });
+UserRole.belongsTo(Role, { foreignKey: 'role_id' });
+User.hasMany(UserRole, { foreignKey: 'user_id' });
+Role.hasMany(UserRole, { foreignKey: 'role_id' });
 
 // 6. Datasets
 const Dataset = sequelize.define('Dataset', {
@@ -140,6 +147,8 @@ const Group = sequelize.define('Group', {
     start_date: DataTypes.DATEONLY,
     end_date: DataTypes.DATEONLY,
     created_by: DataTypes.INTEGER,
+    removed_at: DataTypes.DATE,
+    removed_by: DataTypes.INTEGER,
 }, { tableName: 'groups', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
 // 10. Group Members
@@ -172,6 +181,10 @@ const Exam = sequelize.define('Exam', {
     created_by: { type: DataTypes.INTEGER, allowNull: false },
     removed_at: DataTypes.DATE,
     removed_by: DataTypes.INTEGER,
+    max_questions: { type: DataTypes.INTEGER, defaultValue: 0 },
+    max_marks: { type: DataTypes.INTEGER, defaultValue: 0 },
+    category_id: DataTypes.INTEGER,
+    topic_id: DataTypes.INTEGER,
 }, {
     tableName: 'exams',
     timestamps: true,
@@ -191,20 +204,60 @@ const ExamGroup = sequelize.define('ExamGroup', {
     indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'group_id'] }]
 });
 
-// 13. Questions
+// 13. Exam Questions (Many-to-Many join table)
+const ExamQuestion = sequelize.define('ExamQuestion', {
+    organization_id: { type: DataTypes.INTEGER, allowNull: false },
+    exam_id: { type: DataTypes.INTEGER, allowNull: false },
+    question_id: { type: DataTypes.INTEGER, allowNull: false },
+    marks: { type: DataTypes.INTEGER, defaultValue: 1 },
+    sort_order: { type: DataTypes.INTEGER, defaultValue: 0 },
+}, {
+    tableName: 'exam_questions',
+    timestamps: false,
+    indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'question_id'] }]
+});
+
+// 14. Categories
+const Category = sequelize.define('Category', {
+    organization_id: { type: DataTypes.INTEGER, allowNull: false },
+    name: { type: DataTypes.STRING(255), allowNull: false },
+    description: DataTypes.TEXT,
+    status_code: { type: DataTypes.STRING(100), defaultValue: 'ACTIVE' },
+}, {
+    tableName: 'categories',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// 15. Topics
+const Topic = sequelize.define('Topic', {
+    organization_id: { type: DataTypes.INTEGER, allowNull: false },
+    category_id: { type: DataTypes.INTEGER, allowNull: false },
+    name: { type: DataTypes.STRING(255), allowNull: false },
+    description: DataTypes.TEXT,
+    status_code: { type: DataTypes.STRING(100), defaultValue: 'ACTIVE' },
+}, {
+    tableName: 'topics',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+});
+
+// 16. Questions
 const Question = sequelize.define('Question', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     question_text: { type: DataTypes.TEXT, allowNull: false },
     question_type_code: { type: DataTypes.STRING(100), allowNull: false }, // QUESTION_TYPE
     difficulty_code: DataTypes.STRING(100), // QUESTION_DIFFICULTY
     marks: { type: DataTypes.INTEGER, defaultValue: 1 },
-    exam_id: DataTypes.INTEGER,
-    survey_id: DataTypes.INTEGER,
+    category_id: { type: DataTypes.INTEGER, allowNull: false },
+    topic_id: { type: DataTypes.INTEGER, allowNull: false },
     created_by: { type: DataTypes.INTEGER, allowNull: false },
     upload_batch_id: DataTypes.INTEGER,
 }, { tableName: 'questions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 14. Question Options
+// 17. Question Options
 const QuestionOption = sequelize.define('QuestionOption', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     question_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -213,7 +266,7 @@ const QuestionOption = sequelize.define('QuestionOption', {
     sort_order: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { tableName: 'question_options', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 15. Exam Attempts
+// 18. Exam Attempts
 const ExamAttempt = sequelize.define('ExamAttempt', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     exam_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -230,7 +283,7 @@ const ExamAttempt = sequelize.define('ExamAttempt', {
     indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'user_id'] }]
 });
 
-// 16. Answers
+// 19. Answers
 const Answer = sequelize.define('Answer', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     exam_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -242,7 +295,7 @@ const Answer = sequelize.define('Answer', {
     answered_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, { tableName: 'answers', timestamps: false });
 
-// 17. Results
+// 20. Results
 const Result = sequelize.define('Result', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     exam_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -265,7 +318,7 @@ const Result = sequelize.define('Result', {
     indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'user_id'] }]
 });
 
-// 18. Courses
+// 21. Courses
 const Course = sequelize.define('Course', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     title: { type: DataTypes.STRING(255), allowNull: false },
@@ -278,7 +331,7 @@ const Course = sequelize.define('Course', {
     created_by: { type: DataTypes.INTEGER, allowNull: false },
 }, { tableName: 'courses', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 19. Modules
+// 22. Modules
 const Module = sequelize.define('Module', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     course_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -288,7 +341,7 @@ const Module = sequelize.define('Module', {
     status_code: { type: DataTypes.STRING(100), allowNull: false }, // MODULE_STATUS
 }, { tableName: 'modules', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 20. Lessons
+// 23. Lessons
 const Lesson = sequelize.define('Lesson', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     module_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -302,7 +355,7 @@ const Lesson = sequelize.define('Lesson', {
     exam_id: DataTypes.INTEGER,
 }, { tableName: 'lessons', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 21. Enrollments
+// 24. Enrollments
 const Enrollment = sequelize.define('Enrollment', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     user_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -318,7 +371,7 @@ const Enrollment = sequelize.define('Enrollment', {
     indexes: [{ unique: true, fields: ['organization_id', 'user_id', 'course_id'] }]
 });
 
-// 22. Lesson Progress
+// 25. Lesson Progress
 const LessonProgress = sequelize.define('LessonProgress', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     enrollment_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -331,7 +384,7 @@ const LessonProgress = sequelize.define('LessonProgress', {
     indexes: [{ unique: true, fields: ['enrollment_id', 'lesson_id'] }]
 });
 
-// 23. Assignments
+// 26. Assignments
 const Assignment = sequelize.define('Assignment', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     group_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -342,7 +395,7 @@ const Assignment = sequelize.define('Assignment', {
     created_by: { type: DataTypes.INTEGER, allowNull: false },
 }, { tableName: 'assignments', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 24. Surveys
+// 27. Surveys
 const Survey = sequelize.define('Survey', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     title: { type: DataTypes.STRING(255), allowNull: false },
@@ -355,7 +408,7 @@ const Survey = sequelize.define('Survey', {
     created_by: { type: DataTypes.INTEGER, allowNull: false },
 }, { tableName: 'surveys', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 25. Survey Groups
+// 28. Survey Groups
 const SurveyGroup = sequelize.define('SurveyGroup', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     survey_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -366,7 +419,7 @@ const SurveyGroup = sequelize.define('SurveyGroup', {
     indexes: [{ unique: true, fields: ['organization_id', 'survey_id', 'group_id'] }]
 });
 
-// 26. Survey Responses
+// 29. Survey Responses
 const SurveyResponse = sequelize.define('SurveyResponse', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     survey_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -376,7 +429,7 @@ const SurveyResponse = sequelize.define('SurveyResponse', {
     ip_address: DataTypes.STRING(50),
 }, { tableName: 'survey_responses', timestamps: false });
 
-// 27. Notifications
+// 30. Notifications
 const Notification = sequelize.define('Notification', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     title: { type: DataTypes.STRING(255), allowNull: false },
@@ -387,7 +440,7 @@ const Notification = sequelize.define('Notification', {
     created_by: { type: DataTypes.INTEGER, allowNull: false },
 }, { tableName: 'notifications', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
-// 28. Notices
+// 31. Notices
 const Notice = sequelize.define('Notice', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     title: { type: DataTypes.STRING(255), allowNull: false },
@@ -401,7 +454,7 @@ const Notice = sequelize.define('Notice', {
     file_url: DataTypes.STRING(255),
 }, { tableName: 'notices', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
-// 29. Feedback
+// 32. Feedback
 const Feedback = sequelize.define('Feedback', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     message: { type: DataTypes.TEXT, allowNull: false },
@@ -411,7 +464,7 @@ const Feedback = sequelize.define('Feedback', {
     status_code: { type: DataTypes.STRING(100), allowNull: false }, // FEEDBACK_STATUS
 }, { tableName: 'feedback', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
-// 30. Audit Logs
+// 33. Audit Logs
 const AuditLog = sequelize.define('AuditLog', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     table_name: { type: DataTypes.STRING(150), allowNull: false },
@@ -423,7 +476,7 @@ const AuditLog = sequelize.define('AuditLog', {
     changed_by: DataTypes.INTEGER,
 }, { tableName: 'audit_logs', timestamps: true, createdAt: 'changed_at', updatedAt: false });
 
-// 31. Activity Logs
+// 34. Activity Logs
 const ActivityLog = sequelize.define('ActivityLog', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     user_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -434,7 +487,7 @@ const ActivityLog = sequelize.define('ActivityLog', {
     spent_time_seconds: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { tableName: 'activity_logs', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
-// 32. Login Sessions
+// 35. Login Sessions
 const LoginSession = sequelize.define('LoginSession', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     user_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -446,7 +499,7 @@ const LoginSession = sequelize.define('LoginSession', {
     duration_seconds: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { tableName: 'login_sessions', timestamps: false });
 
-// 33. Plans
+// 36. Plans
 const Plan = sequelize.define('Plan', {
     name: { type: DataTypes.STRING(150), allowNull: false },
     description: DataTypes.TEXT,
@@ -458,7 +511,7 @@ const Plan = sequelize.define('Plan', {
     status_code: { type: DataTypes.STRING(100), allowNull: false }, // PLAN_STATUS
 }, { tableName: 'plans', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 34. Plan Limits
+// 37. Plan Limits
 const PlanLimit = sequelize.define('PlanLimit', {
     plan_id: { type: DataTypes.INTEGER, allowNull: false },
     limit_key: { type: DataTypes.STRING(100), allowNull: false }, // users, exams, etc.
@@ -471,7 +524,7 @@ const PlanLimit = sequelize.define('PlanLimit', {
     indexes: [{ unique: true, fields: ['plan_id', 'limit_key'] }]
 });
 
-// 35. Subscriptions
+// 38. Subscriptions
 const Subscription = sequelize.define('Subscription', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     plan_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -482,7 +535,7 @@ const Subscription = sequelize.define('Subscription', {
     external_payment_ref: DataTypes.STRING(150),
 }, { tableName: 'subscriptions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 36. Wallets
+// 39. Wallets
 const Wallet = sequelize.define('Wallet', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     user_id: DataTypes.INTEGER, // NULL for org-level
@@ -490,7 +543,7 @@ const Wallet = sequelize.define('Wallet', {
     status_code: { type: DataTypes.STRING(100), allowNull: false }, // WALLET_STATUS
 }, { tableName: 'wallets', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 37. Transactions
+// 40. Transactions
 const Transaction = sequelize.define('Transaction', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     wallet_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -502,7 +555,7 @@ const Transaction = sequelize.define('Transaction', {
     description: DataTypes.STRING(255),
 }, { tableName: 'transactions', timestamps: true, createdAt: 'created_at', updatedAt: false });
 
-// 38. Staging Tables
+// 41. Staging Tables
 const StagingParticipant = sequelize.define('StagingParticipant', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     batch_code: { type: DataTypes.STRING(50), allowNull: false },
@@ -518,7 +571,7 @@ const StagingParticipant = sequelize.define('StagingParticipant', {
     issue_type: { type: DataTypes.STRING(100), allowNull: true }, // e.g. INVALID_EMAIL, DUPLICATE_EMAIL, etc.
 }, { tableName: 'staging_participants', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 39. Participant Files — tracks uploaded Excel batches
+// 42. Participant Files — tracks uploaded Excel batches
 const ParticipantFile = sequelize.define('ParticipantFile', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     file_code: { type: DataTypes.STRING(20), allowNull: false }, // XX#### prefix
@@ -532,7 +585,7 @@ const ParticipantFile = sequelize.define('ParticipantFile', {
     group_ids: { type: DataTypes.JSON, allowNull: true }, // multi-group
 }, { tableName: 'participant_files', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
-// 40. History — tracks all CREATE/UPDATE/DELETE on Participants and Questions
+// 43. History — tracks all CREATE/UPDATE/DELETE on Participants and Questions
 const History = sequelize.define('History', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     entity_type: { type: DataTypes.STRING(50), allowNull: false }, // PARTICIPANT | QUESTION
@@ -546,7 +599,7 @@ const History = sequelize.define('History', {
     detail: { type: DataTypes.JSON, allowNull: true }, // diff / extra info
 }, { tableName: 'history', timestamps: true, createdAt: 'changed_at', updatedAt: false });
 
-// 41. Staging Questions — tracks questions in the staging area before approval
+// 44. Staging Questions — tracks questions in the staging area before approval
 const StagingQuestion = sequelize.define('StagingQuestion', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
     batch_code: { type: DataTypes.STRING(50), allowNull: false },
@@ -581,7 +634,10 @@ DatasetValueMetadata.belongsTo(DatasetValue, { foreignKey: 'dataset_value_id' })
 // Associations (Batch 2)
 Organization.hasMany(Group, { foreignKey: 'organization_id' });
 Group.belongsTo(Organization, { foreignKey: 'organization_id' });
-User.hasMany(Group, { foreignKey: 'created_by' }); // Groups created_by users
+User.hasMany(Group, { foreignKey: 'created_by' });
+Group.belongsTo(User, { foreignKey: 'created_by' });
+User.hasMany(Group, { as: 'RemovedGroups', foreignKey: 'removed_by' });
+Group.belongsTo(User, { as: 'Remover', foreignKey: 'removed_by' });
 
 Organization.hasMany(GroupMember, { foreignKey: 'organization_id' });
 GroupMember.belongsTo(Organization, { foreignKey: 'organization_id' });
@@ -590,19 +646,54 @@ GroupMember.belongsTo(Group, { foreignKey: 'group_id' });
 User.hasMany(GroupMember, { foreignKey: 'user_id' });
 GroupMember.belongsTo(User, { foreignKey: 'user_id' });
 
+User.hasMany(User, { as: 'RemovedUsers', foreignKey: 'removed_by' });
+User.belongsTo(User, { as: 'Remover', foreignKey: 'removed_by' });
+
 Organization.hasMany(Exam, { foreignKey: 'organization_id' });
 Exam.belongsTo(Organization, { foreignKey: 'organization_id' });
 User.hasMany(Exam, { foreignKey: 'created_by' });
 Exam.belongsTo(User, { as: 'Creator', foreignKey: 'created_by' });
+
+Organization.hasMany(Category, { foreignKey: 'organization_id' });
+Category.belongsTo(Organization, { foreignKey: 'organization_id' });
+
+Organization.hasMany(Topic, { foreignKey: 'organization_id' });
+Topic.belongsTo(Organization, { foreignKey: 'organization_id' });
+
+Category.hasMany(Topic, { foreignKey: 'category_id' });
+Topic.belongsTo(Category, { foreignKey: 'category_id' });
+
+Organization.hasMany(ExamQuestion, { foreignKey: 'organization_id' });
+ExamQuestion.belongsTo(Organization, { foreignKey: 'organization_id' });
+
+Exam.belongsToMany(Question, { through: ExamQuestion, foreignKey: 'exam_id' });
+Question.belongsToMany(Exam, { through: ExamQuestion, foreignKey: 'question_id' });
+
+Exam.hasMany(ExamQuestion, { foreignKey: 'exam_id' });
+ExamQuestion.belongsTo(Exam, { foreignKey: 'exam_id' });
+
+Question.hasMany(ExamQuestion, { foreignKey: 'question_id' });
+ExamQuestion.belongsTo(Question, { foreignKey: 'question_id' });
+
+Category.hasMany(Question, { foreignKey: 'category_id' });
+Question.belongsTo(Category, { foreignKey: 'category_id' });
+
+Topic.hasMany(Question, { foreignKey: 'topic_id' });
+Question.belongsTo(Topic, { foreignKey: 'topic_id' });
+
+Category.hasMany(Exam, { foreignKey: 'category_id' });
+Exam.belongsTo(Category, { foreignKey: 'category_id' });
+
+Topic.hasMany(Exam, { foreignKey: 'topic_id' });
+Exam.belongsTo(Topic, { foreignKey: 'topic_id' });
 
 Exam.belongsToMany(Group, { through: ExamGroup, foreignKey: 'exam_id' });
 Group.belongsToMany(Exam, { through: ExamGroup, foreignKey: 'group_id' });
 
 Organization.hasMany(Question, { foreignKey: 'organization_id' });
 Question.belongsTo(Organization, { foreignKey: 'organization_id' });
-Exam.hasMany(Question, { foreignKey: 'exam_id' });
-Question.belongsTo(Exam, { foreignKey: 'exam_id' });
 User.hasMany(Question, { foreignKey: 'created_by' });
+Question.belongsTo(User, { foreignKey: 'created_by' });
 
 Question.hasMany(QuestionOption, { foreignKey: 'question_id' });
 QuestionOption.belongsTo(Question, { foreignKey: 'question_id' });
@@ -791,4 +882,8 @@ module.exports = {
     StagingQuestion,
     ParticipantFile,
     History,
+    Category,
+    Topic,
+    ExamQuestion,
+    sequelize,
 };
