@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { verifyCoupon } from '../../../utils/api';
 
 const Subscription = () => {
   const location = useLocation();
@@ -8,14 +9,51 @@ const Subscription = () => {
   const [paymentType, setPaymentType] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(null); // { discount_amount, discount_type, discount_value, coupon_code }
+  const [couponLoading, setCouponLoading] = useState(false);
+
   // Get plan details
   const selectedPlan = location.state?.selectedPlan;
   const planName = selectedPlan?.name || 'Monthly';
   const basePrice = Number(selectedPlan?.price ?? 29);
   const planId = selectedPlan?.id ?? null;
 
-  const gst = parseFloat((basePrice * 0.18).toFixed(2));
-  const total = (basePrice + gst).toFixed(2);
+  const discount = couponApplied ? couponApplied.discount_amount : 0;
+  const priceAfterDiscount = Math.max(0, basePrice - discount);
+  const gst = parseFloat((priceAfterDiscount * 0.18).toFixed(2));
+  const total = (priceAfterDiscount + gst).toFixed(2);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+    setCouponLoading(true);
+    try {
+      const data = await verifyCoupon(couponCode.trim(), planId);
+      setCouponApplied({
+        coupon_code: data.coupon_code,
+        discount_type: data.discount_type,
+        discount_value: data.discount_value,
+        discount_amount: data.discount_amount || 0,
+      });
+      toast.success(`Coupon "${data.coupon_code}" applied! You save $${(data.discount_amount || 0).toFixed(2)}`);
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Invalid coupon code';
+      toast.error(msg);
+      setCouponApplied(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponApplied(null);
+    setCouponCode('');
+    toast.success('Coupon removed');
+  };
 
   const handlePayment = () => {
     if (!planId) {
@@ -25,15 +63,18 @@ const Subscription = () => {
     setIsProcessing(true);
     toast.loading("Processing Secure Payment...");
 
-    // Simulate a network delay
     setTimeout(() => {
-      // Logic for Success vs Error (90% success rate simulation)
       const isSuccess = Math.random() > 0.05;
 
       if (isSuccess) {
         toast.dismiss();
         toast.success("Payment Successful!");
-        navigate('/registration', { state: { planId } });
+        navigate('/registration', { 
+          state: { 
+            planId,
+            coupon_code: couponApplied?.coupon_code || null,
+          } 
+        });
       } else {
         toast.dismiss();
         navigate('/error');
@@ -53,6 +94,30 @@ const Subscription = () => {
               <span>2BRAINR {planName} Plan</span>
               <span>${basePrice.toFixed(2)}</span>
             </div>
+
+            {/* Coupon Discount Line */}
+            {couponApplied && (
+              <div className="flex justify-between text-emerald-200">
+                <span className="flex items-center gap-2">
+                  🎟️ Coupon ({couponApplied.coupon_code})
+                  <button 
+                    onClick={handleRemoveCoupon}
+                    className="text-xs underline text-indigo-200 hover:text-white ml-1"
+                  >
+                    Remove
+                  </button>
+                </span>
+                <span>-${discount.toFixed(2)}</span>
+              </div>
+            )}
+
+            {couponApplied && (
+              <div className="flex justify-between text-indigo-200">
+                <span>Subtotal</span>
+                <span>${priceAfterDiscount.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="flex justify-between text-indigo-200">
               <span>GST (18%)</span>
               <span>${gst}</span>
@@ -62,7 +127,36 @@ const Subscription = () => {
             <span>Total Amount</span>
             <span>${total}</span>
           </div>
-          <p className="mt-10 text-sm italic text-indigo-200">
+
+          {/* Coupon Input Section */}
+          <div className="mt-8 pt-6 border-t border-indigo-400">
+            <p className="text-sm font-semibold mb-3 text-indigo-100">Have a coupon code?</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="Enter coupon code"
+                disabled={!!couponApplied}
+                className="flex-1 px-4 py-3 rounded-xl text-slate-800 font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+              />
+              {!couponApplied ? (
+                <button
+                  onClick={handleApplyCoupon}
+                  disabled={couponLoading || !couponCode.trim()}
+                  className="px-5 py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {couponLoading ? '...' : 'Apply'}
+                </button>
+              ) : (
+                <div className="px-4 py-3 bg-emerald-500 text-white rounded-xl font-bold text-sm flex items-center gap-1">
+                  ✓ Applied
+                </div>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-6 text-sm italic text-indigo-200">
             * Your subscription will begin immediately after successful payment.
           </p>
         </div>

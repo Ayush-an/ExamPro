@@ -1,22 +1,7 @@
+import React, { useState, useEffect } from "react";
 import { fetchSuperUserGroups, updateGroup, deleteSuperUserGroup } from "../../../utils/api";
 import { toast } from "react-hot-toast";
-import {
-  Users,
-  Search,
-  MoreVertical,
-  Edit3,
-  Trash2,
-  ChevronRight,
-  Calendar,
-  Layers,
-  Info,
-  ExternalLink,
-  Shield,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Archive
-} from "lucide-react";
+import { Search, Edit3, Trash2, Calendar, Clock, Archive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ManageGroups() {
@@ -199,8 +184,8 @@ export default function ManageGroups() {
                   </td>
                   <td className="px-8 py-6 text-center">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black tracking-widest border ${g.status === "Active"
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        : "bg-red-50 text-red-600 border-red-100"
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                      : "bg-red-50 text-red-600 border-red-100"
                       }`}>
                       <span className={`w-1 h-1 rounded-full ${g.status === "Active" ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}></span>
                       {g.status}
@@ -213,7 +198,7 @@ export default function ManageGroups() {
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleEditClick(g)}
                         className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
@@ -237,7 +222,7 @@ export default function ManageGroups() {
 
       <AnimatePresence>
         {editingGroup && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-120 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -328,7 +313,7 @@ export default function ManageGroups() {
                   </button>
                   <button
                     onClick={handleSaveEdit}
-                    className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 hover:bg-black transition-all shadow-xl shadow-slate-100"
+                    className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold hover:bg-black transition-all shadow-xl shadow-slate-100"
                   >
                     Save Changes
                   </button>

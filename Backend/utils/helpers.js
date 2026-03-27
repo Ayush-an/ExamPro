@@ -25,3 +25,26 @@ exports.generateFileCode = () => {
     const digits = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
     return `${l1}${l2}${digits}`;
 };
+
+/**
+ * Shared helper to log actions to the History table
+ */
+exports.logHistory = async (orgId, entityType, entityId, entityName, action, opts = {}) => {
+    try {
+        const { History } = require('../models');
+        await History.create({
+            organization_id: orgId,
+            entity_type: entityType,
+            entity_id: entityId,
+            entity_name: entityName,
+            action,
+            file_name: opts.file_name || null,
+            file_code: opts.file_code || null,
+            changed_by_id: opts.changed_by_id || null,
+            changed_by_name: opts.changed_by_name || null,
+            detail: opts.detail || null,
+        });
+    } catch (e) {
+        console.error('logHistory error:', e.message);
+    }
+};

@@ -1,12 +1,13 @@
 const {
     Exam, ExamGroup, ExamQuestion, Group, GroupMember, Question, QuestionOption,
     Notice, Feedback, Assignment, Result, Answer, ExamAttempt,
-    User, Role, UserRole, StagingParticipant, Category, Topic
+    User, Role, UserRole, StagingParticipant, Category, Topic,
+    Subscription, Plan
 } = require('../models');
 const { Op } = require('sequelize');
 const multer = require('multer');
 const xlsx = require('xlsx');
-const { generateBatchCode } = require('../utils/helpers');
+const { generateBatchCode, generateFileCode, logHistory } = require('../utils/helpers');
 
 // ─── Multer setup ──────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -28,7 +29,9 @@ exports.getExams = async (req, res) => {
             },
             include: [
                 { model: Group, through: { attributes: [] } },
-                { model: User, as: 'Creator', attributes: ['full_name'] }
+                { model: User, as: 'Creator', attributes: ['full_name'] },
+                { model: Category, through: { attributes: [] } },
+                { model: Topic, through: { attributes: [] } }
             ],
             order: [['created_at', 'DESC']]
         });
@@ -42,17 +45,14 @@ exports.getExams = async (req, res) => {
 exports.createExam = async (req, res) => {
     try {
         const { 
-            title, description, duration_minutes, duration, groupIds, group_id, 
-            start_date, end_date, scheduled, status, status_code,
-            max_questions, max_marks, category_id, topic_id
+            title, description, duration_minutes, duration, group_ids, 
+            start_date, end_date, scheduled, status_code,
+            category_ids, topic_ids
         } = req.body;
         const examCode = generateBatchCode();
 
-        // Determine status: if scheduled with dates, set SCHEDULED; otherwise ACTIVE
-        let finalStatus = status_code || status || 'ACTIVE';
-        if (scheduled && start_date) {
-            finalStatus = 'SCHEDULED';
-        }
+        let finalStatus = status_code || 'ACTIVE';
+        if (scheduled && start_date) finalStatus = 'SCHEDULED';
 
         const exam = await Exam.create({
             organization_id: req.user.organization_id,
@@ -62,28 +62,52 @@ exports.createExam = async (req, res) => {
             exam_code: examCode,
             start_date: start_date || null,
             end_date: end_date || null,
-            created_by: req.user.id,
-            max_questions: parseInt(max_questions) || 0,
-            max_marks: parseInt(max_marks) || 0,
-            category_id: category_id || null,
-            topic_id: topic_id || null
+            created_by: req.user.id
         });
 
-        // Support multiple groupIds
-        const gids = groupIds || (group_id ? [group_id] : []);
-        for (const gid of gids) {
-            await ExamGroup.create({
-                organization_id: req.user.organization_id,
-                exam_id: exam.id,
-                group_id: parseInt(gid)
-            });
+        if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
+            await exam.setGroups(group_ids, { through: { organization_id: req.user.organization_id } });
         }
 
-        // Re-fetch with groups
-        const created = await Exam.findByPk(exam.id, {
-            include: [{ model: Group, through: { attributes: [] } }]
-        });
-        res.json({ message: 'Exam created', exam: created });
+        // 🎯 Auto-assign questions based on MULTIPLE Categories & Topics
+        let assignedCount = 0;
+        let assignedMarks = 0;
+
+        if (category_ids && category_ids.length) {
+            await exam.setCategories(category_ids, { through: { organization_id: req.user.organization_id } });
+        }
+        if (topic_ids && topic_ids.length) {
+            await exam.setTopics(topic_ids, { through: { organization_id: req.user.organization_id } });
+        }
+
+        const conditions = [];
+        if (category_ids && category_ids.length) conditions.push({ category_id: category_ids });
+        if (topic_ids && topic_ids.length) conditions.push({ topic_id: topic_ids });
+
+        if (conditions.length) {
+            const questions = await Question.findAll({ 
+                where: { 
+                    organization_id: req.user.organization_id, 
+                    [Op.or]: conditions 
+                } 
+            });
+
+            for (const q of questions) {
+                const [eq, created] = await ExamQuestion.findOrCreate({
+                    where: { 
+                        organization_id: req.user.organization_id, 
+                        exam_id: exam.id, 
+                        question_id: q.id 
+                    },
+                    defaults: { marks: q.marks || 1 }
+                });
+                assignedCount++;
+                assignedMarks += (eq.marks || 1);
+            }
+        }
+
+        await exam.update({ max_questions: assignedCount, max_marks: assignedMarks });
+        res.json({ message: 'Exam created successfully', exam });
     } catch (err) {
         console.error('createExam:', err);
         res.status(500).json({ error: 'Server error' });
@@ -99,43 +123,79 @@ exports.updateExam = async (req, res) => {
         if (!exam) return res.status(404).json({ error: 'Exam not found' });
 
         const { 
-            title, description, duration_minutes, duration, status, status_code, 
-            start_date, end_date, groupIds, selectedGroups,
-            max_questions, max_marks, category_id, topic_id
+            title, description, duration_minutes, duration, status_code, 
+            start_date, end_date, group_ids,
+            category_ids, topic_ids
         } = req.body;
 
-        // Build update object with only allowed fields
         const updateData = {};
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
         if (duration_minutes !== undefined || duration !== undefined) updateData.duration_minutes = duration_minutes || duration;
-        if (status_code !== undefined || status !== undefined) updateData.status_code = status_code || status;
+        if (status_code !== undefined) updateData.status_code = status_code;
         if (start_date !== undefined) updateData.start_date = start_date;
         if (end_date !== undefined) updateData.end_date = end_date;
-        if (max_questions !== undefined) updateData.max_questions = parseInt(max_questions) || 0;
-        if (max_marks !== undefined) updateData.max_marks = parseInt(max_marks) || 0;
-        if (category_id !== undefined) updateData.category_id = category_id;
-        if (topic_id !== undefined) updateData.topic_id = topic_id;
 
         await exam.update(updateData);
 
-        // Handle group reassignment
-        const gids = groupIds || selectedGroups;
-        if (gids && Array.isArray(gids)) {
-            await ExamGroup.destroy({ where: { exam_id: id } });
-            for (const gid of gids) {
-                await ExamGroup.create({
-                    organization_id: req.user.organization_id,
-                    exam_id: parseInt(id),
-                    group_id: parseInt(gid)
+        if (group_ids && Array.isArray(group_ids)) {
+            await exam.setGroups(group_ids, { through: { organization_id: req.user.organization_id } });
+        }
+
+        if (category_ids && Array.isArray(category_ids)) {
+            await exam.setCategories(category_ids, { through: { organization_id: req.user.organization_id } });
+        }
+        if (topic_ids && Array.isArray(topic_ids)) {
+            await exam.setTopics(topic_ids, { through: { organization_id: req.user.organization_id } });
+        }
+
+        // 🎯 Re-run auto-assignment and recalc stats
+        let assignedCount = 0;
+        let assignedMarks = 0;
+
+        const conditions = [];
+        // Use updated lists or current ones
+        const finalCats = category_ids || (await exam.getCategories()).map(c => c.id);
+        const finalTopics = topic_ids || (await exam.getTopics()).map(t => t.id);
+
+        if (finalCats.length) conditions.push({ category_id: finalCats });
+        if (finalTopics.length) conditions.push({ topic_id: finalTopics });
+
+        if (conditions.length) {
+            const questions = await Question.findAll({ 
+                where: { 
+                    organization_id: req.user.organization_id, 
+                    [Op.or]: conditions 
+                } 
+            });
+
+            for (const q of questions) {
+                const [eq, created] = await ExamQuestion.findOrCreate({
+                    where: { 
+                        organization_id: req.user.organization_id, 
+                        exam_id: exam.id, 
+                        question_id: q.id 
+                    },
+                    defaults: { marks: q.marks || 1 }
                 });
             }
         }
 
-        // Re-fetch with groups
+        // Final tally from join table
+        const allEQ = await ExamQuestion.findAll({ where: { exam_id: exam.id } });
+        assignedCount = allEQ.length;
+        assignedMarks = allEQ.reduce((sum, item) => sum + (item.marks || 1), 0);
+
+        await exam.update({ max_questions: assignedCount, max_marks: assignedMarks });
+
         const updated = await Exam.findByPk(id, {
-            include: [{ model: Group, through: { attributes: [] } }]
+            include: [
+                { model: Group, through: { attributes: [] } },
+                { model: Category, through: { attributes: [] } },
+                { model: Topic, through: { attributes: [] } }
+            ]
         });
+
         res.json({ message: 'Exam updated', exam: updated });
     } catch (err) {
         console.error('updateExam:', err);
@@ -150,6 +210,9 @@ exports.deleteExam = async (req, res) => {
             where: { id, organization_id: req.user.organization_id }
         });
         if (!exam) return res.status(404).json({ error: 'Exam not found' });
+        
+        // Allow deleting any exam regardless of its current status as it is a soft delete.
+
         await exam.update({ removed_at: new Date(), removed_by: req.user.id, status_code: 'REMOVED' });
 
         // Add Notification
@@ -166,6 +229,33 @@ exports.deleteExam = async (req, res) => {
         res.json({ message: 'Exam removed' });
     } catch (err) {
         console.error('deleteExam:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.restoreExam = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const exam = await Exam.findOne({
+            where: { id, organization_id: req.user.organization_id }
+        });
+        if (!exam) return res.status(404).json({ error: 'Exam not found' });
+
+        // Restore status: if it was scheduled and end_date > now, keep SCHEDULED, else ACTIVE
+        let newStatus = 'ACTIVE';
+        if (exam.end_date && new Date(exam.end_date) > new Date()) {
+            newStatus = 'SCHEDULED';
+        }
+
+        await exam.update({ 
+            removed_at: null, 
+            removed_by: null, 
+            status_code: newStatus 
+        });
+
+        res.json({ message: 'Exam restored successfully', exam });
+    } catch (err) {
+        console.error('restoreExam error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -709,6 +799,21 @@ exports.getQuestions = async (req, res) => {
 
 exports.createQuestion = async (req, res) => {
     try {
+        const orgId = req.user.organization_id;
+
+        // Check question limit
+        const sub = await Subscription.findOne({
+            where: { organization_id: orgId, status_code: 'ACTIVE' },
+            include: [{ model: Plan }],
+            order: [['created_at', 'DESC']],
+        });
+        if (sub && sub.Plan && sub.Plan.question_limit != null) {
+            const totalQuestions = await Question.count({ where: { organization_id: orgId } });
+            if (totalQuestions >= sub.Plan.question_limit) {
+                return res.status(403).json({ error: `Question limit reached (${totalQuestions}/${sub.Plan.question_limit}). Please upgrade your plan.` });
+            }
+        }
+
         const { category_id, topic_id, question_text, question_type_code, difficulty_code, marks, options } = req.body;
         const question = await Question.create({
             organization_id: req.user.organization_id,
@@ -736,6 +841,13 @@ exports.createQuestion = async (req, res) => {
         const created = await Question.findByPk(question.id, {
             include: [{ model: QuestionOption }]
         });
+
+        await logHistory(orgId, 'QUESTION', question.id, question_text, 'CREATE', {
+            changed_by_id: req.user.id,
+            changed_by_name: req.user.name || req.user.full_name,
+            detail: { category_id, topic_id, marks }
+        });
+
         res.json({ message: 'Question created', question: created });
     } catch (err) {
         console.error('createQuestion:', err);
@@ -751,7 +863,22 @@ exports.uploadQuestions = async (req, res) => {
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        // Check question limit before processing bulk upload
+        const sub = await Subscription.findOne({
+            where: { organization_id: orgId, status_code: 'ACTIVE' },
+            include: [{ model: Plan }],
+            order: [['created_at', 'DESC']],
+        });
+        if (sub && sub.Plan && sub.Plan.question_limit != null) {
+            const totalQuestions = await Question.count({ where: { organization_id: orgId } });
+            if (totalQuestions + data.length > sub.Plan.question_limit) {
+                return res.status(403).json({ error: `Upload exceeds question limit. Current: ${totalQuestions}, File: ${data.length}, Limit: ${sub.Plan.question_limit}. Please upgrade your plan.` });
+            }
+        }
+
         let count = 0;
+        const fileCode = generateFileCode();
 
         for (const row of data) {
             // Find or create Category
@@ -775,11 +902,12 @@ exports.uploadQuestions = async (req, res) => {
             });
 
             // Prevent duplicate question text in same topic
+            const qText = String(row.Question || row.question_text || row.question || 'No text').trim();
             const existing = await Question.findOne({
                 where: {
                     organization_id: orgId,
                     topic_id: topic.id,
-                    question_text: String(row.Question || row.question_text).trim()
+                    question_text: qText
                 }
             });
             if (existing) continue;
@@ -788,7 +916,7 @@ exports.uploadQuestions = async (req, res) => {
                 organization_id: orgId,
                 category_id: category.id,
                 topic_id: topic.id,
-                question_text: String(row.Question || row.question_text || 'No text').trim(),
+                question_text: qText,
                 question_type_code: row.Type || 'MCQ',
                 difficulty_code: row.Difficulty || 'MEDIUM',
                 marks: parseInt(row.Marks) || 1,
@@ -811,6 +939,17 @@ exports.uploadQuestions = async (req, res) => {
             }
             count++;
         }
+
+        if (count > 0) {
+            await logHistory(orgId, 'QUESTION', null, `${count} Questions Bulk Upload`, 'UPLOAD', {
+                file_name: req.file.originalname,
+                file_code: fileCode,
+                changed_by_id: req.user.id,
+                changed_by_name: req.user.name || req.user.full_name,
+                detail: { total: count, method: 'EXCEL' }
+            });
+        }
+
         res.json({ message: `${count} questions uploaded`, count });
     } catch (err) {
         console.error('uploadQuestions:', err);
@@ -826,44 +965,34 @@ exports.assignQuestionsToExam = async (req, res) => {
         const exam = await Exam.findByPk(examId);
         if (!exam) return res.status(404).json({ error: 'Exam not found' });
 
-        // Calculate current totals
-        const existingEntries = await ExamQuestion.findAll({ where: { exam_id: examId, organization_id: orgId } });
-        let currentCount = existingEntries.length;
-        let currentMarks = existingEntries.reduce((sum, entry) => sum + entry.marks, 0);
-
         const newlyAdded = [];
         for (const qId of questionIds) {
-            // Check if already assigned
-            const exists = await ExamQuestion.findOne({ where: { exam_id: examId, question_id: qId, organization_id: orgId } });
-            if (exists) continue;
-
             const question = await Question.findByPk(qId);
             if (!question) continue;
 
             const qMarks = (marksMap && marksMap[qId]) ? parseInt(marksMap[qId]) : question.marks;
 
-            // Validation against limits
-            if (exam.max_questions > 0 && currentCount + 1 > exam.max_questions) {
-                return res.status(400).json({ error: `Exceeds max questions limit (${exam.max_questions})`, count: currentCount });
-            }
-            if (exam.max_marks > 0 && currentMarks + qMarks > exam.max_marks) {
-                return res.status(400).json({ error: `Exceeds max marks limit (${exam.max_marks})`, currentMarks });
-            }
-
-            await ExamQuestion.create({
-                organization_id: orgId,
-                exam_id: examId,
-                question_id: qId,
-                marks: qMarks,
-                sort_order: currentCount
+            const [eq, created] = await ExamQuestion.findOrCreate({
+                where: { 
+                    exam_id: examId, 
+                    question_id: qId, 
+                    organization_id: orgId 
+                },
+                defaults: {
+                    marks: qMarks,
+                    sort_order: 0
+                }
             });
-
-            currentCount++;
-            currentMarks += qMarks;
-            newlyAdded.push(qId);
+            if (created) newlyAdded.push(qId);
         }
 
-        res.json({ message: 'Questions assigned', added: newlyAdded.length, currentCount, currentMarks });
+        // Recalculate stats
+        const allEQ = await ExamQuestion.findAll({ where: { exam_id: examId } });
+        const assignedCount = allEQ.length;
+        const assignedMarks = allEQ.reduce((sum, item) => sum + (parseInt(item.marks) || 1), 0);
+        await exam.update({ max_questions: assignedCount, max_marks: assignedMarks });
+
+        res.json({ message: 'Questions assigned', added: newlyAdded.length, currentCount: assignedCount, currentMarks: assignedMarks });
     } catch (err) {
         console.error('assignQuestionsToExam:', err);
         res.status(500).json({ error: 'Server error' });
@@ -873,6 +1002,9 @@ exports.assignQuestionsToExam = async (req, res) => {
 exports.unassignQuestionFromExam = async (req, res) => {
     try {
         const { examId, questionId } = req.body;
+        const exam = await Exam.findByPk(examId);
+        if (!exam) return res.status(404).json({ error: 'Exam not found' });
+
         await ExamQuestion.destroy({ 
             where: { 
                 exam_id: examId, 
@@ -880,6 +1012,13 @@ exports.unassignQuestionFromExam = async (req, res) => {
                 organization_id: req.user.organization_id 
             } 
         });
+
+        // Recalculate stats
+        const allEQ = await ExamQuestion.findAll({ where: { exam_id: examId } });
+        const assignedCount = allEQ.length;
+        const assignedMarks = allEQ.reduce((sum, item) => sum + (parseInt(item.marks) || 1), 0);
+        await exam.update({ max_questions: assignedCount, max_marks: assignedMarks });
+
         res.json({ message: 'Question unassigned' });
     } catch (err) {
         console.error('unassignQuestionFromExam:', err);
@@ -890,8 +1029,19 @@ exports.unassignQuestionFromExam = async (req, res) => {
 exports.deleteQuestion = async (req, res) => {
     try {
         const { id } = req.params;
-        await QuestionOption.destroy({ where: { question_id: id } });
-        await Question.destroy({ where: { id, organization_id: req.user.organization_id } });
+        const orgId = req.user.organization_id;
+        const question = await Question.findOne({ where: { id, organization_id: orgId } });
+        
+        if (question) {
+            await QuestionOption.destroy({ where: { question_id: id } });
+            await Question.destroy({ where: { id, organization_id: orgId } });
+            
+            await logHistory(orgId, 'QUESTION', id, question.question_text, 'DELETE', {
+                changed_by_id: req.user.id,
+                changed_by_name: req.user.name || req.user.full_name
+            });
+        }
+        
         res.json({ message: 'Question deleted' });
     } catch (err) {
         console.error('deleteQuestion:', err);
@@ -1290,5 +1440,105 @@ exports.updateMyProfile = async (req, res) => {
     } catch (err) {
         console.error('updateMyProfile:', err);
         res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.getQuestionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const orgId = req.user.organization_id;
+        const question = await Question.findOne({
+            where: { id, organization_id: orgId },
+            include: [{ model: QuestionOption }]
+        });
+        if (!question) return res.status(404).json({ error: 'Question not found' });
+        res.json(question);
+    } catch (err) {
+        console.error('getQuestionById:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.updateQuestion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const orgId = req.user.organization_id;
+        const { category_id, topic_id, question_text, question_type_code, difficulty_code, marks, options } = req.body;
+
+        const question = await Question.findOne({ where: { id, organization_id: orgId } });
+        if (!question) return res.status(404).json({ error: 'Question not found' });
+
+        await question.update({
+            category_id,
+            topic_id,
+            question_text,
+            question_type_code: question_type_code || 'MCQ',
+            difficulty_code: difficulty_code || 'MEDIUM',
+            marks: marks || 1,
+        });
+
+        if (options && Array.isArray(options)) {
+            // Simple sync: delete existing options and recreate
+            await QuestionOption.destroy({ where: { question_id: id } });
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].text || options[i].option_text) {
+                    await QuestionOption.create({
+                        organization_id: orgId,
+                        question_id: id,
+                        option_text: options[i].text || options[i].option_text,
+                        is_correct: options[i].is_correct || false,
+                        sort_order: i
+                    });
+                }
+            }
+        }
+
+        await logHistory(orgId, 'QUESTION', id, question_text, 'UPDATE', {
+            changed_by_id: req.user.id,
+            changed_by_name: req.user.name || req.user.full_name,
+            detail: { category_id, topic_id, marks }
+        });
+
+        const updated = await Question.findByPk(id, {
+            include: [{ model: QuestionOption }]
+        });
+        res.json({ message: 'Question updated', question: updated });
+    } catch (err) {
+        console.error('updateQuestion:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// 1. QUESTION HISTORY
+exports.getQuestionHistory = async (req, res) => {
+    try {
+        const { organization_id } = req.user;
+        const { action, file_code, from, to } = req.query;
+        const { History, Op } = require('../models');
+
+        const where = {
+            organization_id,
+            entity_type: 'QUESTION',
+        };
+
+        if (action) where.action = action;
+        if (file_code) {
+           where.file_code = { [Op.like]: `%${file_code}%` };
+        }
+        if (from || to) {
+            where.changed_at = {};
+            if (from) where.changed_at[Op.gte] = new Date(from);
+            if (to) where.changed_at[Op.lte] = new Date(to);
+        }
+
+        const history = await History.findAll({
+            where,
+            order: [['changed_at', 'DESC']],
+        });
+
+        res.json({ success: true, data: history });
+    } catch (e) {
+        console.error('getQuestionHistory error:', e);
+        res.status(500).json({ error: 'Failed to fetch question history' });
     }
 };

@@ -1,6 +1,7 @@
 // src/components/exam/RemoveExam.jsx
 import React, { useEffect, useState } from "react";
-import { fetchRemovedExams } from "../../../utils/api";
+import { fetchRemovedExams, restoreExam } from "../../../utils/api";
+import { toast } from "react-hot-toast";
 import { Search, Download, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 const RemovedExam = () => {
@@ -20,6 +21,17 @@ const RemovedExam = () => {
       setExams(data);
     } catch (error) {
       console.error("Error fetching removed exams:", error);
+    }
+  };
+
+  const handleResolve = async (id) => {
+    try {
+      if (!window.confirm("Restore this exam?")) return;
+      await restoreExam(id);
+      toast.success("Exam restored successfully!");
+      loadRemovedExams();
+    } catch (err) {
+      toast.error("Failed to restore exam.");
     }
   };
 
@@ -100,8 +112,8 @@ const RemovedExam = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100">
-                  {["Sr.", "Title", "Exam Code", "Status", "Duration", "Groups", "Created", "Removed"].map((h) => (
-                    <th key={h} className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">{h}</th>
+                  {["Sr.", "Title", "Categories", "Code", "Status", "Duration", "Groups", "Removed", "Actions"].map((h) => (
+                    <th key={h} className="px-5 py-4 text-[10px] font-bold text-slate-400 tracking-widest text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -109,17 +121,25 @@ const RemovedExam = () => {
                 {currentExams.map((exam, idx) => (
                   <tr key={exam.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-4 text-sm font-bold text-slate-400">{currentPage * rowsPerPage + idx + 1}</td>
-                    <td className="px-5 py-4 text-sm font-bold text-slate-800">{exam.title}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-500">{exam.exam_code || "-"}</td>
+                    <td className="px-5 py-4 text-[13px] font-bold text-slate-800">{exam.title}</td>
+                    <td className="px-5 py-4 text-[10px] font-medium text-slate-500 max-w-[120px] truncate">{exam.Categories?.map(c => c.name).join(", ") || "-"}</td>
+                    <td className="px-5 py-4 text-xs font-medium text-slate-500">{exam.exam_code || "-"}</td>
                     <td className="px-5 py-4">
                       <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-rose-50 text-rose-500">
                         {exam.status_code || exam.status || "REMOVED"}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-600">{exam.duration_minutes || exam.duration || 0} min</td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-500">{exam.Groups?.map(g => g.name).join(", ") || "-"}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-500">{formatDate(exam.created_at)}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-500">{formatDate(exam.removed_at)}</td>
+                    <td className="px-5 py-4 text-xs font-medium text-slate-600">{exam.duration_minutes || exam.duration || 0}m</td>
+                    <td className="px-5 py-4 text-xs font-medium text-slate-500">{exam.Groups?.map(g => g.name).join(", ") || "-"}</td>
+                    <td className="px-5 py-4 text-xs font-medium text-slate-500">{formatDate(exam.removed_at)}</td>
+                    <td className="px-5 py-4">
+                      <button
+                        onClick={() => handleResolve(exam.id)}
+                        className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                      >
+                        Restore
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { createGroup } from "../../../utils/api";
-import { Plus, X, Layers, FileText, Calendar, Clock, Shield, Info, ChevronRight, Database, Send, Activity} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { X, Calendar, Clock, Database, } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 export default function CreateGroup({ onClose }) {
@@ -46,14 +45,13 @@ export default function CreateGroup({ onClose }) {
 
   return (
     <div className="p-0 text-left">
-      <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10 rounded-t-[44px]">
+      <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-5 rounded-t-[44px]">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Group</h2>
         </div>
-        <button onClick={onClose} className="p-3 bg-slate-50 rounded-xl text-slate-400 hover:text-red-500 transition"><X size={20} /></button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
+      <form onSubmit={handleSubmit} className="p-5 pt-0 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
         <div className="space-y-6">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 ml-4">Group Name</label>

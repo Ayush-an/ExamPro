@@ -120,10 +120,10 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
                         <DialogTitle as="h3" className="text-2xl font-black text-slate-800 tracking-tight">
                           Provision New Tenant
                         </DialogTitle>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Register Organization & Primary Admin</p>
+                        <p className="text-xs font-bold text-slate-400 tracking-widest">Register Organization & Primary Admin</p>
                       </div>
                     </div>
-                    <button 
+                    <button
                       type="button"
                       onClick={onClose}
                       className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -137,7 +137,7 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
                     <div>
                       <div className="flex items-center gap-2 mb-4 border-l-4 border-indigo-600 pl-3">
                         <Building2 size={16} className="text-indigo-600" />
-                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Organization Profile</h4>
+                        <h4 className="text-sm font-black text-slate-800 tracking-tight">Organization Profile</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
@@ -158,51 +158,51 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
                           required
                         />
                         <div className="relative">
-                           <select
-                              name="country"
-                              value={form.country}
-                              onChange={handleChange}
-                              className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition appearance-none pr-10"
-                              required
-                           >
-                              <option value="">Choose Country</option>
-                              {countries.map((c) => (
-                                 <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
-                              ))}
-                           </select>
-                           <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          <select
+                            name="country"
+                            value={form.country}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition appearance-none pr-10"
+                            required
+                          >
+                            <option value="">Choose Country</option>
+                            {countries.map((c) => (
+                              <option key={c.isoCode} value={c.isoCode}>{c.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         </div>
                         <div className="relative">
-                           <select
-                              name="state"
-                              value={form.state}
-                              onChange={handleChange}
-                              disabled={!form.country}
-                              className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition appearance-none pr-10 disabled:opacity-50"
-                              required={!!form.country}
-                           >
-                              <option value="">Choose State</option>
-                              {states.map((s) => (
-                                 <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
-                              ))}
-                           </select>
-                           <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          <select
+                            name="state"
+                            value={form.state}
+                            onChange={handleChange}
+                            disabled={!form.country}
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition appearance-none pr-10 disabled:opacity-50"
+                            required={!!form.country}
+                          >
+                            <option value="">Choose State</option>
+                            {states.map((s) => (
+                              <option key={s.isoCode} value={s.isoCode}>{s.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         </div>
                         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <input
-                              name="phone"
-                              placeholder="Business Contact Number"
-                              value={form.phone}
-                              onChange={handleChange}
-                              className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
-                           />
-                           <input
-                              name="address"
-                              placeholder="Headquarters Address"
-                              value={form.address}
-                              onChange={handleChange}
-                              className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
-                           />
+                          <input
+                            name="phone"
+                            placeholder="Business Contact Number"
+                            value={form.phone}
+                            onChange={handleChange}
+                            className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                          />
+                          <input
+                            name="address"
+                            placeholder="Headquarters Address"
+                            value={form.address}
+                            onChange={handleChange}
+                            className="px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                          />
                         </div>
                       </div>
                     </div>
@@ -211,7 +211,7 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
                     <div>
                       <div className="flex items-center gap-2 mb-4 border-l-4 border-emerald-500 pl-3">
                         <Lock size={16} className="text-emerald-500" />
-                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Administrative Access</h4>
+                        <h4 className="text-sm font-black text-slate-800 tracking-tight">Administrative Access</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
@@ -254,7 +254,7 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
                   <div className="mt-10 flex flex-col sm:flex-row justify-end gap-3">
                     <button
                       type="button"
-                      className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition"
+                      className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs tracking-wider hover:bg-slate-200 transition"
                       onClick={onClose}
                     >
                       Cancel Provision
@@ -262,7 +262,7 @@ export default function CreateAdmin({ open, onClose, onCreated }) {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex-1 sm:flex-none px-12 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-indigo-600 disabled:bg-slate-300 transition shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
+                      className="flex-1 sm:flex-none px-12 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs tracking-wider hover:bg-indigo-600 disabled:bg-slate-300 transition shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
                     >
                       {loading ? (
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>

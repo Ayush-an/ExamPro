@@ -1,7 +1,6 @@
 const {
-    Group, User, Role, UserRole, GroupMember,
     StagingParticipant, ParticipantFile, History,
-    Exam, Question, ExamGroup, Notice, Feedback, Assignment, Result, sequelize
+    Exam, Question, ExamGroup, Notice, Feedback, Assignment, Result, Subscription, Plan, UserRole, Role, Group, User, GroupMember, sequelize
 } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
@@ -116,6 +115,51 @@ async function promoteToParticipant(orgId, data, opts = {}) {
     return user;
 }
 
+// ─── Helper: check org plan limits ───────────────────────────────────────────
+async function getOrgPlanLimits(orgId) {
+    const subscription = await Subscription.findOne({
+        where: { organization_id: orgId, status_code: 'ACTIVE' },
+        include: [{ model: Plan }],
+        order: [['created_at', 'DESC']],
+    });
+    if (!subscription || !subscription.Plan) return null;
+    return {
+        participant_limit: subscription.Plan.participant_limit,
+        active_participant_limit: subscription.Plan.active_participant_limit,
+        question_limit: subscription.Plan.question_limit,
+        plan_name: subscription.Plan.name,
+    };
+}
+
+async function checkParticipantLimit(orgId) {
+    const limits = await getOrgPlanLimits(orgId);
+    if (!limits) return { allowed: true };
+
+    const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
+    if (!participantRole) return { allowed: true };
+
+    // Total Participants
+    if (limits.participant_limit != null) {
+        const total = await UserRole.count({ where: { role_id: participantRole.id, organization_id: orgId } });
+        if (total >= limits.participant_limit) {
+            return { allowed: false, reason: `Participant limit reached (${total}/${limits.participant_limit}). Please upgrade your plan.` };
+        }
+    }
+
+    // Active Participants
+    if (limits.active_participant_limit != null) {
+        const active = await UserRole.count({
+            where: { role_id: participantRole.id, organization_id: orgId },
+            include: [{ model: User, where: { status_code: 'ACTIVE' } }]
+        });
+        if (active >= limits.active_participant_limit) {
+            return { allowed: false, reason: `Active participant limit reached (${active}/${limits.active_participant_limit}). Please upgrade your plan.` };
+        }
+    }
+
+    return { allowed: true };
+}
+
 // ─── Dashboard Stats ─────────────────────────────────────────────────────────
 exports.getDashboardStats = async (req, res) => {
     try {
@@ -138,12 +182,17 @@ exports.getDashboardStats = async (req, res) => {
             } 
         });
 
+        const limits = await getOrgPlanLimits(orgId);
+        const totalQuestions = await Question.count({ where: { organization_id: orgId } });
+
         res.json({
             totalGroups,
             totalExams,
             totalParticipants,
+            totalQuestions,
             ActiveExams: activeExams,
-            InactiveExams: totalExams - activeExams
+            InactiveExams: totalExams - activeExams,
+            limits
         });
     } catch (error) {
         console.error('getDashboardStats Error:', error);
@@ -223,6 +272,12 @@ exports.createSingleParticipant = async (req, res) => {
         const orgId = req.user.organization_id;
         const changedBy = req.user.id;
         const changedByName = req.user.full_name || 'SuperUser';
+
+        // Check plan limits
+        const limitCheck = await checkParticipantLimit(orgId);
+        if (!limitCheck.allowed) {
+            return res.status(403).json({ error: limitCheck.reason });
+        }
 
         let { group_ids, full_name, email, mobile } = req.body;
 
@@ -351,6 +406,18 @@ exports.uploadParticipants = async (req, res) => {
         const workbook = xlsx.readFile(req.file.path);
         const rows = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
         
+        // Check plan limits for entire batch
+        const limits = await getOrgPlanLimits(orgId);
+        if (limits && limits.participant_limit != null) {
+            const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
+            if (participantRole) {
+                const totalParticipants = await UserRole.count({ where: { role_id: participantRole.id, organization_id: orgId } });
+                if (totalParticipants + rows.length > limits.participant_limit) {
+                    return res.status(403).json({ error: `Upload exceeds participant limit. Current: ${totalParticipants}, File: ${rows.length}, Limit: ${limits.participant_limit}.` });
+                }
+            }
+        }
+
         let created = 0;
         let skipped = [];
 

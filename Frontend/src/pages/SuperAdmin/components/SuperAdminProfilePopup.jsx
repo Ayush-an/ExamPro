@@ -59,7 +59,10 @@ const SuperAdminProfilePopup = ({ onClose }) => {
         </div>
 
         <div className="mt-8 grid grid-cols-2 gap-3">
-          <button className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition group">
+          <button 
+            onClick={() => { navigate("/superadmin/profile"); onClose(); }}
+            className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition group"
+          >
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition shadow-sm">
               <Settings size={20} />
             </div>

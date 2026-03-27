@@ -73,64 +73,64 @@ export default function Dashboard() {
       {/* MAIN STATS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Total Admins */}
-        <StatCard 
-          label="Total Active Admins" 
-          value={stats.totalAdmins} 
+        <StatCard
+          label="Total Active Admins"
+          value={stats.totalAdmins}
           onClick={() => setOpenAdmins(true)}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />}
         />
 
         {/* Total Organizations */}
-        <StatCard 
-          label="Registered Organizations" 
-          value={stats.totalOrganizations} 
+        <StatCard
+          label="Registered Organizations"
+          value={stats.totalOrganizations}
           onClick={() => setOpenOrgs(true)}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />}
         />
 
         {/* Total Participants */}
-        <StatCard 
-          label="Total Participants" 
-          value={stats.totalParticipants} 
+        <StatCard
+          label="Total Participants"
+          value={stats.totalParticipants}
           color="emerald"
           onClick={() => setGlobalPopup({ open: true, type: "Participants" })}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />}
         />
 
         {/* Total Super Users */}
-        <StatCard 
-          label="Total Super Users" 
-          value={stats.totalSuperUsers} 
+        <StatCard
+          label="Total Super Users"
+          value={stats.totalSuperUsers}
           color="amber"
           onClick={() => setGlobalPopup({ open: true, type: "Super Users" })}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />}
         />
 
         {/* Total Questions */}
-        <StatCard 
-          label="Total Questions" 
-          value={stats.totalQuestions} 
+        <StatCard
+          label="Total Questions"
+          value={stats.totalQuestions}
           color="violet"
           onClick={() => setGlobalPopup({ open: true, type: "Questions" })}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
         />
 
         {/* Total Notices */}
-        <StatCard 
-          label="Total Notices" 
-          value={stats.totalNotices} 
+        <StatCard
+          label="Total Notices"
+          value={stats.totalNotices}
           color="rose"
           onClick={() => setGlobalPopup({ open: true, type: "Notices" })}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />}
         />
 
         {/* Total Assignments */}
-        <StatCard 
-          label="Total Assignments" 
-          value={stats.totalAssignments} 
+        <StatCard
+          label="Total Assignments"
+          value={stats.totalAssignments}
           color="sky"
           onClick={() => setGlobalPopup({ open: true, type: "Assignments" })}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />} 
+          icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />}
         />
 
         {/* Action Card */}
@@ -140,7 +140,7 @@ export default function Dashboard() {
         >
           <div className="flex flex-col gap-1 relative z-10">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Administrative Actions</span>
-            <h1 className="text-3xl font-extrabold text-white group-hover:translate-x-2 transition tracking-tighter">
+            <h1 className="text-2xl font-extrabold text-white group-hover:translate-x-2 transition tracking-tighter">
               Create Admin
             </h1>
           </div>
@@ -210,10 +210,10 @@ export default function Dashboard() {
       <CreateAdmin open={openCreate} onClose={() => setOpenCreate(false)} onCreated={fetchStats} />
       <TotalAdmins open={openAdmins} onClose={() => setOpenAdmins(false)} />
       <TotalOrganizations open={openOrgs} onClose={() => setOpenOrgs(false)} />
-      <GlobalDetailsPopup 
-        type={globalPopup.type} 
-        open={globalPopup.open} 
-        onClose={() => setGlobalPopup({ ...globalPopup, open: false })} 
+      <GlobalDetailsPopup
+        type={globalPopup.type}
+        open={globalPopup.open}
+        onClose={() => setGlobalPopup({ ...globalPopup, open: false })}
       />
     </div>
   );
@@ -232,7 +232,7 @@ const StatCard = ({ label, value, onClick, icon, color = "indigo" }) => {
   const [textColor, bgColor] = colorMap[color].split(" ");
 
   return (
-    <div 
+    <div
       className={`group relative p-8 bg-white border border-slate-100 shadow-sm rounded-3xl hover:shadow-xl hover:shadow-indigo-50 transition-all duration-300 overflow-hidden ${onClick ? 'cursor-pointer active:scale-95' : ''}`}
       onClick={onClick}
     >

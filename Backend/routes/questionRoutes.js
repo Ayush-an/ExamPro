@@ -13,6 +13,9 @@ router.post('/upload', uc.upload.single('file'), uc.uploadQuestions);
 router.post('/link', uc.assignQuestionsToExam);
 router.post('/unlink', uc.unassignQuestionFromExam);
 router.delete('/:id', uc.deleteQuestion);
+router.get('/history', uc.getQuestionHistory);
 router.get('/batches', uc.getQuestionBatches);
+router.get('/:id', uc.getQuestionById);
+router.put('/:id', uc.updateQuestion);
 
 module.exports = router;

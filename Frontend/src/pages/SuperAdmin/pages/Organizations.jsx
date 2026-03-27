@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import api from '../../../utils/api';
 import { motion } from 'framer-motion';
 import { Building2, Search, Filter, Plus, MoreVertical, MapPin, Users, Activity, ShieldCheck } from 'lucide-react';
+import OrganizationDetailsModal from '../components/OrganizationDetailsModal';
 
 const Organizations = () => {
     const [organizations, setOrganizations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedOrgId, setSelectedOrgId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchOrganizations = async () => {
@@ -75,11 +78,11 @@ const Organizations = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-white border-b border-slate-50">
-                                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Organization</th>
-                                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">License Plan</th>
-                                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email / Contact</th>
-                                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                                <th className="px-8 py-5 text-[15px] font-bold text-slate-500 tracking-widest">Organization</th>
+                                <th className="px-8 py-5 text-[15px] font-bold text-slate-500 tracking-widest">License Plan</th>
+                                <th className="px-8 py-5 text-[15px] font-bold text-slate-500 tracking-widest">Email / Contact</th>
+                                <th className="px-8 py-5 text-[15px] font-bold text-slate-500 tracking-widest">Status</th>
+                                <th className="px-8 py-5 text-[15px] font-bold text-slate-500 tracking-widest text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -117,7 +120,12 @@ const Organizations = () => {
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                                            <button className="text-[10px] font-bold text-indigo-600 hover:text-white uppercase tracking-widest px-4 py-2 hover:bg-indigo-600 rounded-xl transition-all shadow-sm hover:shadow-indigo-100">Audit</button>
+                                            <button
+                                                onClick={() => { setSelectedOrgId(org.id); setIsModalOpen(true); }}
+                                                className="text-[10px] font-bold text-indigo-600 hover:text-white uppercase tracking-widest px-4 py-2 hover:bg-indigo-600 rounded-xl transition-all shadow-sm hover:shadow-indigo-100"
+                                            >
+                                                Audit
+                                            </button>
                                             <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                                                 <MoreVertical size={16} />
                                             </button>
@@ -140,6 +148,12 @@ const Organizations = () => {
                     </table>
                 </div>
             </div>
+
+            <OrganizationDetailsModal
+                organizationId={selectedOrgId}
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+            />
         </motion.div>
     );
 };

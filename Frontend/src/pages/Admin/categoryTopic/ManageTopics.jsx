@@ -136,7 +136,7 @@ const ManageTopics = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-slate-50/50 text-slate-500 text-[11px] font-bold tracking-wider">
+                            <tr className="bg-slate-50/50 text-slate-600 text-[14px] font-bold tracking-wider">
                                 <th className="px-6 py-4">Topic Name</th>
                                 <th className="px-6 py-4">Category</th>
                                 <th className="px-6 py-4">Description</th>

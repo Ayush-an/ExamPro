@@ -1,4 +1,3 @@
-// SuperAdminDashboard.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -7,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import Organizations from './pages/Organizations';
 import Subscriptions from './pages/Subscriptions';
 import Transactions from './pages/Transactions';
+import Profile from './pages/Profile';
+import Coupons from './pages/Coupons';
 
 const SuperAdminDashboard = () => {
     return (
@@ -28,6 +29,8 @@ const SuperAdminDashboard = () => {
                         <Route path="subscription" element={<Subscriptions />} />
                         <Route path="transactions" element={<Transactions />} />
                         <Route path="organizations" element={<Organizations />} />
+                        <Route path="profile" element={<Profile />} />
+                        <Route path="coupons" element={<Coupons />} />
                         <Route path="*" element={<Dashboard />} />
                     </Routes>
                 </main>

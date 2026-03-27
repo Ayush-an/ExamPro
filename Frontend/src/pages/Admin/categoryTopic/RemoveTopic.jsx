@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, Hash, Layers, 
-  Trash2, RefreshCw
+import {
+    Search, Hash, Layers,
+    Trash2, RefreshCw
 } from 'lucide-react';
-import { 
-  fetchRemovedTopics
+import {
+    fetchRemovedTopics
 } from '../../../utils/api';
 
 const RemoveTopic = () => {
@@ -28,7 +28,7 @@ const RemoveTopic = () => {
         }
     };
 
-    const filtered = topics.filter(t => 
+    const filtered = topics.filter(t =>
         t.name.toLowerCase().includes(search.toLowerCase()) ||
         (t.description && t.description.toLowerCase().includes(search.toLowerCase())) ||
         (t.Category?.name && t.Category.name.toLowerCase().includes(search.toLowerCase()))
@@ -46,8 +46,8 @@ const RemoveTopic = () => {
                     </h2>
                     <p className="text-slate-500 mt-1">Archive of topics that have been removed from the system</p>
                 </div>
-                
-                <button 
+
+                <button
                     onClick={loadRemovedTopics}
                     className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition p-2"
                     title="Refresh List"
@@ -61,7 +61,7 @@ const RemoveTopic = () => {
                 <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                     <div className="relative w-full max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input 
+                        <input
                             type="text"
                             placeholder="Search removed topics..."
                             className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
@@ -74,7 +74,7 @@ const RemoveTopic = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-slate-50/50 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                            <tr className="bg-slate-50/50 text-slate-600 text-[14px] font-bold tracking-wider">
                                 <th className="px-6 py-4">Topic Name</th>
                                 <th className="px-6 py-4">Category</th>
                                 <th className="px-6 py-4">Description</th>

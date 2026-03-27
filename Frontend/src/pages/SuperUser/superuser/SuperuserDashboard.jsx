@@ -173,48 +173,28 @@ const SuperuserDashboard = () => {
         else if (action === "remove") setActiveComponent(<ManageQuestion />); // Fallback to manage for now if no RemoveQuestion exists
       },
     },
-    {
-      id: "assignments",
-      name: "Assignments",
-      icon: <Send size={20} />,
-      onClick: () => openPopup(<Assignments onClose={closePopup} />),
-    },
-    {
-      id: "notice",
-      name: "Notice",
-      icon: <BellRing size={20} />,
-      onClick: () => openPopup(<Notice onClose={closePopup} />),
-    },
-    {
-      id: "feedbacks",
-      name: "Feedbacks",
-      icon: <MessageSquare size={20} />,
-      onClick: () => openPopup(<Feedbacks onClose={closePopup} />),
-    },
   ];
 
   const StatCard = ({ title, value, icon: Icon, colorClass, delay = 0 }) => (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="p-8 bg-white rounded-[40px] border border-slate-50 shadow-sm hover:shadow-xl hover:shadow-indigo-50/50 transition-all group"
+      className="p-6 bg-white rounded-[32px] border border-slate-50 shadow-sm hover:shadow-xl hover:shadow-indigo-50/20 transition-all group relative overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className={`p-4 rounded-2xl ${colorClass.bg} ${colorClass.text} transition-all group-hover:scale-110`}>
-          <Icon size={24} />
+      <div className="flex items-center gap-4 relative z-10">
+        <div className={`p-4 rounded-2xl ${colorClass.bg} ${colorClass.text} group-hover:scale-110 transition-transform duration-300`}>
+          <Icon size={20} />
         </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] font-bold text-slate-400 tracking-wide leading-none mb-1">Status</span>
-          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-500 text-[8px] font-bold tracking-tight border border-emerald-100/50">
-            <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-            Operational
-          </span>
+        <div>
+          <p className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase mb-1">{title}</p>
+          <div className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
+            {isLoading ? "---" : value}
+          </div>
         </div>
       </div>
-      <h4 className="text-[10px] font-bold text-slate-400 tracking-widest mb-1">{title}</h4>
-      <div className="text-4xl font-extrabold text-slate-900 tracking-tighter">
-        {isLoading ? "---" : value}
+      <div className="absolute -right-2 -bottom-2 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-500">
+        <Icon size={80} strokeWidth={1} />
       </div>
     </motion.div>
   );
@@ -273,7 +253,7 @@ const SuperuserDashboard = () => {
         </div>
         <div>
           <h1 className="text-xl font-extrabold text-slate-600 tracking-tighter leading-none">2Brainer</h1>
-          <p className="text-[10px] font-bold text-indigo-600 tracking-widest mt-1.5">SuperUser</p>
+          <p className="text-[10px] font-bold text-indigo-600 tracking-widest mt-1.5">SuperUser Dashboard</p>
         </div>
       </div>
 
@@ -343,7 +323,7 @@ const SuperuserDashboard = () => {
       >
         <SidebarContent />
       </motion.aside>
- 
+
       {/* Mobile Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -382,12 +362,34 @@ const SuperuserDashboard = () => {
 
           <div className="flex items-center gap-4">
             <div className="flex gap-2">
-              <button onClick={() => setShowNotices(!showNotices)} className="w-12 h-12 bg-white border border-slate-50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all relative">
+              <button
+                onClick={() => openPopup(<Assignments onClose={closePopup} />)}
+                className="w-12 h-12 bg-white border border-slate-50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+                title="Assignments"
+              >
+                <Send size={20} />
+              </button>
+              <button
+                onClick={() => openPopup(<Notice onClose={closePopup} />)}
+                className="w-12 h-12 bg-white border border-slate-50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+                title="Send Notice"
+              >
+                <BellRing size={20} />
+              </button>
+              <button
+                onClick={() => openPopup(<Feedbacks onClose={closePopup} />)}
+                className="w-12 h-12 bg-white border border-slate-50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+                title="Feedbacks"
+              >
+                <MessageSquare size={20} />
+              </button>
+              <button
+                onClick={() => setShowNotices(!showNotices)}
+                className="w-12 h-12 bg-white border border-slate-50 rounded-2xl flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all relative"
+                title="Notifications"
+              >
                 <Bell size={20} />
                 {notices.length > 0 && <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500 border-2 border-white"></span>}
-              </button>
-              <button onClick={() => openPopup(<Notice onClose={closePopup} />)} className="hidden sm:flex w-12 h-12 bg-white border border-slate-50 rounded-2xl items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50/50 transition-all">
-                <Send size={20} />
               </button>
             </div>
 
@@ -395,8 +397,8 @@ const SuperuserDashboard = () => {
 
             <div className="flex items-center gap-4 pl-2 h-full">
               <div className="flex flex-col items-end">
-                <p className="text-xs font-extrabold text-slate-600 tracking-tight leading-none">{user?.name || "SuperUser"}</p>
-                <p className="text-3xl font-bold text-indigo-500 tracking-wide mt-1">Operations</p>
+                <p className="text-xs font-extrabold text-slate-600 tracking-tight leading-none">{user?.full_name || "SuperUser"}</p>
+                <p className="text-sm font-bold text-indigo-500 tracking-wide mt-1 line-clamp-1 max-w-[200px] text-right">{user?.Organization?.name || "Operations"}</p>
               </div>
               <div className="relative group">
                 <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white font-bold text-xs shadow-xl shadow-slate-200 border-4 border-white transition-all group-hover:scale-105 cursor-pointer">
@@ -458,8 +460,17 @@ const SuperuserDashboard = () => {
                     <p className="text-sm text-slate-500 font-medium mt-2">Manage your organization's exams and participants.</p>
                   </div>
                   <div className="flex gap-4">
+                    <button onClick={() => openPopup(<CreateGroup onClose={closePopup} />)} className="bg-slate-600 text-white px-8 py-4 rounded-2xl font-bold text-[10px] tracking-wider hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
+                      <Plus size={16} className="text-indigo-400" /> Create Group
+                    </button>
+                    <button onClick={() => openPopup(<CreateParticipant onClose={closePopup} />)} className="bg-slate-600 text-white px-8 py-4 rounded-2xl font-bold text-[10px] tracking-wider hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
+                      <Plus size={16} className="text-indigo-400" /> Create Participant
+                    </button>
                     <button onClick={() => openPopup(<CreateExam onClose={closePopup} />)} className="bg-slate-600 text-white px-8 py-4 rounded-2xl font-bold text-[10px] tracking-wider hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
                       <Plus size={16} className="text-indigo-400" /> Create Exam
+                    </button>
+                    <button onClick={() => openPopup(<CreateQuestion onClose={closePopup} />)} className="bg-slate-600 text-white px-8 py-4 rounded-2xl font-bold text-[10px] tracking-wider hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center gap-3">
+                      <Plus size={16} className="text-indigo-400" /> Create Question
                     </button>
                   </div>
                 </div>
@@ -468,7 +479,7 @@ const SuperuserDashboard = () => {
                   <StatCard title="Total Participants" value={stats.totalParticipants} icon={Users} colorClass={{ bg: 'bg-emerald-50', text: 'text-emerald-500' }} delay={0.1} />
                   <StatCard title="Active Exams" value={stats.ActiveExams} icon={FileText} colorClass={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }} delay={0.2} />
                   <StatCard title="Groups" value={stats.totalGroups} icon={Layers} colorClass={{ bg: 'bg-amber-50', text: 'text-amber-500' }} delay={0.3} />
-                  <StatCard title="Questions" value={stats.totalExams * 5} icon={BookOpen} colorClass={{ bg: 'bg-slate-50', text: 'text-slate-900' }} delay={0.4} />
+                  <StatCard title="Questions" value={stats.totalQuestions} icon={BookOpen} colorClass={{ bg: 'bg-slate-50', text: 'text-slate-900' }} delay={0.4} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -483,9 +494,11 @@ const SuperuserDashboard = () => {
                       <p className="text-[10px] text-indigo-300 font-bold tracking-wide mb-8">Rapid initialization sequence</p>
                       <div className="space-y-4">
                         {[
-                          { name: 'Create Participant', icon: <Users size={14} />, action: () => openPopup(<CreateParticipant onClose={closePopup} />) },
-                          { name: 'Create Group', icon: <Layers size={14} />, action: () => openPopup(<CreateGroup onClose={closePopup} />) },
-                          { name: 'Create Question', icon: <BookOpen size={14} />, action: () => openPopup(<CreateQuestion onClose={closePopup} />) }
+                          { name: 'Manage Participants', icon: <Users size={14} />, action: () => openPopup(<ManageParticipants onClose={closePopup} />) },
+                          { name: 'Manage Groups', icon: <Layers size={14} />, action: () => openPopup(<ManageGroups onClose={closePopup} />) },
+                          { name: 'Manage Questions', icon: <BookOpen size={14} />, action: () => openPopup(<ManageQuestion onClose={closePopup} />) },
+                          { name: 'Manage Exams', icon: <BookOpen size={14} />, action: () => openPopup(<ManageExams onClose={closePopup} />) }
+
                         ].map((btn, i) => (
                           <button key={i} onClick={btn.action} className="w-full flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white hover:text-slate-900 transition-all group/btn">
                             <div className="flex items-center gap-3">
@@ -497,19 +510,6 @@ const SuperuserDashboard = () => {
                         ))}
                       </div>
                     </div>
-
-                    <div className="p-10 bg-white rounded-[40px] border border-slate-50 shadow-sm flex flex-col items-center text-center">
-                      <div className="w-16 h-16 bg-slate-50 rounded-[24px] flex items-center justify-center text-slate-200 mb-6">
-                        <BarChart3 size={32} />
-                      </div>
-                      <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">System Stats</h4>
-                      <p className="text-[10px] text-slate-400 font-bold mt-2 tracking-wide leading-relaxed">
-                        Detailed metrics and performance data.
-                      </p>
-                      <button className="mt-8 text-[10px] font-bold text-indigo-600 tracking-wide hover:gap-4 transition-all flex items-center gap-2">
-                        View Report <ChevronRight size={14} />
-                      </button>
-                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -520,8 +520,8 @@ const SuperuserDashboard = () => {
         <AnimatePresence>
           {showNotices && (
             <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNotices(false)} className="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-[60]" />
-              <motion.div initial={{ x: 400 }} animate={{ x: 0 }} exit={{ x: 400 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed right-0 top-0 bottom-0 w-[400px] bg-white border-l border-slate-100 z-[70] shadow-2xl flex flex-col">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowNotices(false)} className="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-60" />
+              <motion.div initial={{ x: 400 }} animate={{ x: 0 }} exit={{ x: 400 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed right-0 top-0 bottom-0 w-[400px] bg-white border-l border-slate-100 z-70 shadow-2xl flex flex-col">
                 <div className="p-10 border-b border-slate-50 flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Notifications</h3>
@@ -562,11 +562,11 @@ const SuperuserDashboard = () => {
 
         <AnimatePresence>
           {popupComponent && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={closePopup} />
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden">
                 <div className="bg-white rounded-[44px] shadow-2xl relative">
-                  <button className="absolute top-8 right-8 z-[110] p-2 text-slate-300 hover:text-red-500 transition" onClick={closePopup}><X size={24} /></button>
+                  <button className="absolute top-8 right-8 z-110 p-2 text-slate-300 hover:text-red-500 transition" onClick={closePopup}><X size={24} /></button>
                   <div className="p-0">
                     {React.isValidElement(popupComponent)
                       ? React.cloneElement(popupComponent, { onClose: closePopup, open: true })

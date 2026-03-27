@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   fetchSuperUserParticipants,
   fetchSuperUserGroups,
@@ -285,7 +286,7 @@ const ManageParticipant = () => {
 
       <AnimatePresence>
         {modalOpen && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-120 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
               <div className="p-10 border-b border-slate-50">
@@ -326,7 +327,7 @@ const ManageParticipant = () => {
                 </div>
                 <div className="flex gap-4 pt-4">
                   <button onClick={() => setModalOpen(false)} className="flex-1 px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 hover:bg-slate-100 transition-all border border-slate-100">Cancel</button>
-                  <button onClick={handleEditSave} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 hover:bg-black transition-all shadow-xl shadow-slate-100">Save Changes</button>
+                  <button onClick={handleEditSave} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold hover:bg-black transition-all shadow-xl shadow-slate-100">Save Changes</button>
                 </div>
               </div>
             </motion.div>

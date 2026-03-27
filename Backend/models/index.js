@@ -217,6 +217,28 @@ const ExamQuestion = sequelize.define('ExamQuestion', {
     indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'question_id'] }]
 });
 
+// 13a. Exam Categories
+const ExamCategory = sequelize.define('ExamCategory', {
+    organization_id: { type: DataTypes.INTEGER, allowNull: false },
+    exam_id: { type: DataTypes.INTEGER, allowNull: false },
+    category_id: { type: DataTypes.INTEGER, allowNull: false },
+}, {
+    tableName: 'exam_categories',
+    timestamps: false,
+    indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'category_id'] }]
+});
+
+// 13b. Exam Topics
+const ExamTopic = sequelize.define('ExamTopic', {
+    organization_id: { type: DataTypes.INTEGER, allowNull: false },
+    exam_id: { type: DataTypes.INTEGER, allowNull: false },
+    topic_id: { type: DataTypes.INTEGER, allowNull: false },
+}, {
+    tableName: 'exam_topics',
+    timestamps: false,
+    indexes: [{ unique: true, fields: ['organization_id', 'exam_id', 'topic_id'] }]
+});
+
 // 14. Categories
 const Category = sequelize.define('Category', {
     organization_id: { type: DataTypes.INTEGER, allowNull: false },
@@ -509,6 +531,9 @@ const Plan = sequelize.define('Plan', {
     price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
     currency_code: { type: DataTypes.STRING(10), allowNull: false },
     status_code: { type: DataTypes.STRING(100), allowNull: false }, // PLAN_STATUS
+    participant_limit: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null }, // null = unlimited
+    active_participant_limit: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
+    question_limit: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
 }, { tableName: 'plans', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
 // 37. Plan Limits
@@ -533,6 +558,8 @@ const Subscription = sequelize.define('Subscription', {
     start_date: { type: DataTypes.DATEONLY, allowNull: false },
     end_date: { type: DataTypes.DATEONLY, allowNull: false },
     external_payment_ref: DataTypes.STRING(150),
+    coupon_code: { type: DataTypes.STRING(50), allowNull: true, defaultValue: null },
+    discount_amount: { type: DataTypes.DECIMAL(10, 2), allowNull: true, defaultValue: null },
 }, { tableName: 'subscriptions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
 // 39. Wallets
@@ -609,6 +636,15 @@ const StagingQuestion = sequelize.define('StagingQuestion', {
     issues: DataTypes.TEXT,
 }, { tableName: 'staging_questions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
 
+// 45. Coupons
+const Coupon = sequelize.define('Coupon', {
+    coupon_code: { type: DataTypes.STRING(50), allowNull: false, unique: true },
+    discount_type: { type: DataTypes.STRING(20), allowNull: false }, // PERCENTAGE | FIXED
+    discount_value: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    description: DataTypes.TEXT,
+    status_code: { type: DataTypes.STRING(20), defaultValue: 'ACTIVE' },
+}, { tableName: 'coupons', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' });
+
 // Associations (Initial Batch)
 Organization.hasMany(OrganizationSetting, { foreignKey: 'organization_id' });
 OrganizationSetting.belongsTo(Organization, { foreignKey: 'organization_id' });
@@ -681,11 +717,19 @@ Question.belongsTo(Category, { foreignKey: 'category_id' });
 Topic.hasMany(Question, { foreignKey: 'topic_id' });
 Question.belongsTo(Topic, { foreignKey: 'topic_id' });
 
-Category.hasMany(Exam, { foreignKey: 'category_id' });
-Exam.belongsTo(Category, { foreignKey: 'category_id' });
+// Many-to-Many Categories for Exam
+Exam.belongsToMany(Category, { through: ExamCategory, foreignKey: 'exam_id' });
+Category.belongsToMany(Exam, { through: ExamCategory, foreignKey: 'category_id' });
 
-Topic.hasMany(Exam, { foreignKey: 'topic_id' });
-Exam.belongsTo(Topic, { foreignKey: 'topic_id' });
+// Many-to-Many Topics for Exam
+Exam.belongsToMany(Topic, { through: ExamTopic, foreignKey: 'exam_id' });
+Topic.belongsToMany(Exam, { through: ExamTopic, foreignKey: 'topic_id' });
+
+// Also keep the individual associations for backward compatibility or simple lookups if needed
+Exam.hasMany(ExamCategory, { foreignKey: 'exam_id' });
+ExamCategory.belongsTo(Exam, { foreignKey: 'exam_id' });
+Exam.hasMany(ExamTopic, { foreignKey: 'exam_id' });
+ExamTopic.belongsTo(Exam, { foreignKey: 'exam_id' });
 
 Exam.belongsToMany(Group, { through: ExamGroup, foreignKey: 'exam_id' });
 Group.belongsToMany(Exam, { through: ExamGroup, foreignKey: 'group_id' });
@@ -882,8 +926,11 @@ module.exports = {
     StagingQuestion,
     ParticipantFile,
     History,
+    Coupon,
     Category,
     Topic,
+    ExamCategory,
+    ExamTopic,
     ExamQuestion,
     sequelize,
 };

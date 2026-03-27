@@ -52,14 +52,14 @@ export default function QuestionHistory() {
   const formatDetail = (detail) => {
     if (!detail) return "—";
     if (typeof detail !== "object") return String(detail);
-    
+
     // Quick concise summaries
     const parts = [];
     if (detail.total) parts.push(`Total: ${detail.total}, Errs: ${detail.errors}`);
     if (detail.method) parts.push(`Source: ${detail.method}`);
     if (detail.issues?.length) parts.push(`Issues: ${detail.issues.length}`);
     if (detail.question_id) parts.push(`QID: ${detail.question_id}`);
-    
+
     return parts.length > 0 ? parts.join(" | ") : JSON.stringify(detail).substring(0, 100);
   };
 
@@ -98,8 +98,8 @@ export default function QuestionHistory() {
           <Search className="w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search XX#### File Code"
-            className="bg-transparent text-sm font-medium text-slate-800 focus:outline-none placeholder-slate-400 w-full uppercase"
+            placeholder="Search"
+            className="bg-transparent text-sm font-medium text-slate-800 focus:outline-none placeholder-slate-400 w-full"
             value={fileCode}
             onChange={(e) => setFileCode(e.target.value.toUpperCase())}
           />
@@ -137,12 +137,12 @@ export default function QuestionHistory() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50/80 border-b border-slate-100">
                 <tr>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500 uppercase text-xs tracking-wider">Date/Time</th>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500 uppercase text-xs tracking-wider">Action</th>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500 uppercase text-xs tracking-wider">Entity Name / Snippet</th>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500 uppercase text-xs tracking-wider">File Origin</th>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500 uppercase text-xs tracking-wider">Changed By</th>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500 uppercase text-xs tracking-wider">Details</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs tracking-wider">Date/Time</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs tracking-wider">Action</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs tracking-wider">Entity Name / Snippet</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs tracking-wider">File Origin</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs tracking-wider">Changed By</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs tracking-wider">Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">

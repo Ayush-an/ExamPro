@@ -14,6 +14,7 @@ const Registration = () => {
   const [states, setStates] = useState([]);
 
   const planId = location.state?.planId;
+  const couponCode = location.state?.coupon_code || null;
 
   const [formData, setFormData] = useState({
     orgName: '', orgEmail: '', country: '', countryCode: '', state: '', orgPhone: '', orgAddress: '',
@@ -57,7 +58,8 @@ const Registration = () => {
         adminEmail: formData.adminEmail,
         adminPhone: formData.adminPhone,
         password: formData.adminPassword,
-        planId: planId
+        planId: planId,
+        coupon_code: couponCode,
       };
       await registerOrganization(payload);
       toast.dismiss();
@@ -91,7 +93,7 @@ const Registration = () => {
     </div>
   );
   return (
-    <div className="min-h-[calc(100vh-80px)] flex items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50 px-4 py-10">
+    <div className="min-h-[calc(100vh-80px)] flex items-center justify-center bg-linear-to-br from-slate-50 to-indigo-50 px-4 py-10">
       <div className="w-full max-w-4xl bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
 
         {/* Stepper */}

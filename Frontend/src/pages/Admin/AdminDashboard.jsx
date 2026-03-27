@@ -61,6 +61,7 @@ const AdminDashboard = () => {
     totalCategories: 0,
     totalTopics: 0,
     totalQuestions: 0,
+    limits: null
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -122,7 +123,7 @@ const AdminDashboard = () => {
       name: "Exams", icon: FileText,
       children: ["Create Exam", "Manage Exam", "Remove Exam"],
       onClick: (action) => {
-        if (action === "Create Exam") openPopup(<CreateExam onSuccess={() => setRefreshKey(k => k + 1)} />);
+        if (action === "Create Exam") setActiveComponent(<CreateExam onSuccess={() => setRefreshKey(k => k + 1)} />);
         else if (action === "Manage Exam") setActiveComponent(<ManageExams />);
         else if (action === "Remove Exam") setActiveComponent(<RemoveExam />);
       },
@@ -147,8 +148,8 @@ const AdminDashboard = () => {
       name: "Questions", icon: Plus,
       children: ["Create Questions", "Manage Questions", "Staging Questions", "Question History"],
       onClick: (action) => {
-        if (action === "Create Questions") openPopup(<CreateQuestion onSuccess={() => setRefreshKey(k => k + 1)} />);
-        else if (action === "Manage Questions") setActiveComponent(<ManageQuestion />);
+        if (action === "Create Questions") setActiveComponent(<CreateQuestion onCreated={() => setRefreshKey(k => k + 1)} />);
+        else if (action === "Manage Questions") setActiveComponent(<ManageQuestion onEdit={(id) => setActiveComponent(<CreateQuestion questionId={id} onCreated={() => setRefreshKey(k => k + 1)} onClose={() => setActiveComponent(<ManageQuestion />)} />)} />);
         else if (action === "Staging Questions") setActiveComponent(<StagingQuestion />);
         else if (action === "Question History") setActiveComponent(<QuestionHistory />);
       },
@@ -168,11 +169,11 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-700">
       {/* Header */}
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+      {/* Header - Condensed and Lower Z-Index */}
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
 
-        {/* TOP NAVBAR */}
-        <div className="flex items-center justify-between px-8 py-3">
+        {/* TOP NAVBAR - Slightly more compact padding */}
+        <div className="flex items-center justify-between px-8 py-2.5">
 
           {/* Logo */}
           <div
@@ -236,7 +237,7 @@ const AdminDashboard = () => {
                   {user?.full_name || user?.name || "Admin"}
                 </span>
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {user?.Organization?.name || "Organization Admin"}
+                  {stats?.limits?.plan_name || user?.Organization?.name || "Organization Admin"}
                 </span>
               </div>
 
@@ -247,8 +248,8 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* SECOND NAVBAR (MENU) */}
-        <div className="border-t border-slate-100 bg-slate-50">
+        {/* SECOND NAVBAR (MENU) - Compact layout */}
+        <div className="border-t border-slate-100 bg-white/80 backdrop-blur-md">
 
           <nav className="flex items-center gap-1 px-8 py-2">
 
@@ -315,8 +316,8 @@ const AdminDashboard = () => {
             {/* Hero Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {[
-                { label: "Total Participants", value: stats.totalParticipants, color: "indigo", icon: GraduationCap },
-                { label: "Active Participants", value: stats.activeParticipants, color: "emerald", icon: CheckCircle2 },
+                { label: "Total Participants", value: stats.totalParticipants, limit: stats.limits?.participant_limit, color: "indigo", icon: GraduationCap },
+                { label: "Active Participants", value: stats.activeParticipants, limit: stats.limits?.active_participant_limit, color: "emerald", icon: CheckCircle2 },
                 { label: "Total Groups", value: stats.totalGroups, color: "slate", icon: Users },
                 { label: "Active Groups", value: stats.activeGroups, color: "emerald", icon: Users },
                 { label: "Total Exams", value: stats.totalExams, color: "slate", icon: FileText },
@@ -325,7 +326,7 @@ const AdminDashboard = () => {
                 { label: "Completed Exams", value: stats.completedExams, color: "slate", icon: FileText },
                 { label: "Total Categories", value: stats.totalCategories, color: "slate", icon: Layers },
                 { label: "Total Topics", value: stats.totalTopics, color: "slate", icon: Hash },
-                { label: "Total Questions", value: stats.totalQuestions, color: "indigo", icon: Plus },
+                { label: "Total Questions", value: stats.totalQuestions, limit: stats.limits?.question_limit, color: "indigo", icon: Plus },
                 { label: "Total Super Users", value: stats.totalSuperUsers, color: "slate", icon: User },
                 { label: "Active Super Users", value: stats.activeSuperUsers, color: "emerald", icon: User },
               ].map((stat, idx) => (
@@ -339,7 +340,12 @@ const AdminDashboard = () => {
                 }}>
                   <div className="flex flex-col gap-1 relative z-10">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
-                    <h1 className={`text-4xl font-extrabold ${stat.color === 'emerald' ? 'text-emerald-600' : stat.color === 'amber' ? 'text-amber-600' : 'text-slate-800'} group-hover:text-indigo-600 transition tracking-tighter`}>{(stat.value ?? 0).toLocaleString()}</h1>
+                    <h1 className={`text-3xl font-extrabold ${stat.color === 'emerald' ? 'text-emerald-600' : stat.color === 'amber' ? 'text-amber-600' : 'text-slate-800'} group-hover:text-indigo-600 transition tracking-tighter flex items-baseline gap-1`}>
+                      {(stat.value ?? 0).toLocaleString()}
+                      {stat.limit != null && (
+                        <span className="text-sm font-bold text-slate-300">/ {stat.limit.toLocaleString()}</span>
+                      )}
+                    </h1>
                   </div>
                   <div className={`absolute top-8 right-8 w-12 h-12 ${stat.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : stat.color === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'} rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition duration-300`}>
                     {stat.icon && <stat.icon size={24} />}

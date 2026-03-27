@@ -2,7 +2,7 @@ const {
     Group, User, Role, UserRole, GroupMember,
     StagingParticipant, ParticipantFile, History,
     Exam, Question, ExamGroup, Category, Topic, Op: _Op,
-    sequelize
+    sequelize, Subscription, Plan
 } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
@@ -10,7 +10,7 @@ const xlsx = require('xlsx');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { generateRandomPassword, generateBatchCode, generateFileCode } = require('../utils/helpers');
+const { generateRandomPassword, generateBatchCode, generateFileCode, logHistory } = require('../utils/helpers');
 
 // ─── Upload dir ─────────────────────────────────────────────────────────────
 const uploadDir = path.join(__dirname, '../upload');
@@ -22,25 +22,6 @@ const storage = multer.diskStorage({
 });
 exports.upload = multer({ storage });
 
-// ─── Helper: log to History ──────────────────────────────────────────────────
-async function logHistory(orgId, entityType, entityId, entityName, action, opts = {}) {
-    try {
-        await History.create({
-            organization_id: orgId,
-            entity_type: entityType,
-            entity_id: entityId,
-            entity_name: entityName,
-            action,
-            file_name: opts.file_name || null,
-            file_code: opts.file_code || null,
-            changed_by_id: opts.changed_by_id || null,
-            changed_by_name: opts.changed_by_name || null,
-            detail: opts.detail || null,
-        });
-    } catch (e) {
-        console.error('logHistory error:', e.message);
-    }
-}
 
 // ─── Helper: validate single email ───────────────────────────────────────────
 function isValidEmail(email) {
@@ -116,6 +97,65 @@ async function promoteToParticipant(orgId, data, opts = {}) {
     });
 
     return user;
+}
+
+// ─── Helper: check org plan limits ───────────────────────────────────────────
+async function getOrgPlanLimits(orgId) {
+    const subscription = await Subscription.findOne({
+        where: { organization_id: orgId, status_code: 'ACTIVE' },
+        include: [{ model: Plan }],
+        order: [['created_at', 'DESC']],
+    });
+    if (!subscription || !subscription.Plan) return null;
+    return {
+        participant_limit: subscription.Plan.participant_limit,
+        active_participant_limit: subscription.Plan.active_participant_limit,
+        question_limit: subscription.Plan.question_limit,
+        plan_name: subscription.Plan.name,
+    };
+}
+
+async function checkParticipantLimit(orgId) {
+    const limits = await getOrgPlanLimits(orgId);
+    if (!limits) return { allowed: true };
+
+    if (limits.participant_limit != null) {
+        const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
+        if (participantRole) {
+            const totalParticipants = await UserRole.count({ where: { role_id: participantRole.id, organization_id: orgId } });
+            if (totalParticipants >= limits.participant_limit) {
+                return { allowed: false, reason: `Total participant limit reached (${totalParticipants}/${limits.participant_limit}). Please upgrade your plan.` };
+            }
+        }
+    }
+
+    if (limits.active_participant_limit != null) {
+        const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
+        if (participantRole) {
+            const activeParticipants = await UserRole.count({
+                where: { role_id: participantRole.id, organization_id: orgId },
+                include: [{ model: User, where: { status_code: 'ACTIVE' } }]
+            });
+            if (activeParticipants >= limits.active_participant_limit) {
+                return { allowed: false, reason: `Active participant limit reached (${activeParticipants}/${limits.active_participant_limit}). Please upgrade your plan.` };
+            }
+        }
+    }
+
+    return { allowed: true };
+}
+
+async function checkQuestionLimit(orgId) {
+    const limits = await getOrgPlanLimits(orgId);
+    if (!limits) return { allowed: true };
+
+    if (limits.question_limit != null) {
+        const totalQuestions = await Question.count({ where: { organization_id: orgId } });
+        if (totalQuestions >= limits.question_limit) {
+            return { allowed: false, reason: `Question limit reached (${totalQuestions}/${limits.question_limit}). Please upgrade your plan.` };
+        }
+    }
+    return { allowed: true };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -195,6 +235,18 @@ exports.uploadParticipants = async (req, res) => {
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        // Check plan limits before processing bulk upload
+        const limits = await getOrgPlanLimits(orgId);
+        if (limits && limits.participant_limit != null) {
+            const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
+            if (participantRole) {
+                const totalParticipants = await UserRole.count({ where: { role_id: participantRole.id, organization_id: orgId } });
+                if (totalParticipants + rows.length > limits.participant_limit) {
+                    return res.status(403).json({ error: `Upload exceeds participant limit. Current: ${totalParticipants}, File: ${rows.length}, Limit: ${limits.participant_limit}. Please upgrade your plan.` });
+                }
+            }
+        }
 
         // Collect emails and mobiles in this batch for duplicate detection
         const batchEmails = new Map();   // email → first row index
@@ -337,6 +389,12 @@ exports.createSingleParticipant = async (req, res) => {
         const changedBy = req.user.id;
         const changedByName = req.user.full_name || req.user.name || 'Admin';
 
+        // Check plan limits before creating
+        const limitCheck = await checkParticipantLimit(orgId);
+        if (!limitCheck.allowed) {
+            return res.status(403).json({ error: limitCheck.reason });
+        }
+
         let { group_ids, group_id, full_name, email, mobile } = req.body;
 
         // Support both single group_id and multi group_ids
@@ -464,6 +522,12 @@ exports.updateStagingParticipant = async (req, res) => {
         const isNowClean = issues.length === 0;
 
         if (isNowClean) {
+            // Check plan limits before promoting
+            const limitCheck = await checkParticipantLimit(orgId);
+            if (!limitCheck.allowed) {
+                return res.status(403).json({ error: limitCheck.reason });
+            }
+
             // Auto-promote and delete from staging
             await promoteToParticipant(orgId, {
                 full_name: fullName,
@@ -539,6 +603,13 @@ exports.approveStagingParticipant = async (req, res) => {
         const record = await StagingParticipant.findOne({ where: { id, organization_id: orgId } });
         if (!record) return res.status(404).json({ error: 'Record not found' });
         if (record.status_code === 'ERROR') return res.status(400).json({ error: 'Record still has issues — fix them first' });
+
+        // Check plan limits before promoting
+        const limitCheck = await checkParticipantLimit(orgId);
+        if (!limitCheck.allowed) {
+            return res.status(403).json({ error: limitCheck.reason });
+        }
+
         const user = await promoteToParticipant(orgId, {
             full_name: record.full_name,
             email: record.email,
@@ -588,6 +659,18 @@ exports.approveAllStagingBatch = async (req, res) => {
         });
 
         if (records.length === 0) return res.status(400).json({ error: 'No pending records in this batch' });
+
+        // Check plan limits for entire batch
+        const limits = await getOrgPlanLimits(orgId);
+        if (limits && limits.participant_limit != null) {
+            const participantRole = await Role.findOne({ where: { code: 'PARTICIPANT', organization_id: orgId } });
+            if (participantRole) {
+                const totalParticipants = await UserRole.count({ where: { role_id: participantRole.id, organization_id: orgId } });
+                if (totalParticipants + records.length > limits.participant_limit) {
+                    return res.status(403).json({ error: `Approving this batch would exceed participant limit. Current: ${totalParticipants}, Batch: ${records.length}, Limit: ${limits.participant_limit}.` });
+                }
+            }
+        }
 
         let created = 0;
         let fileCode = null;
@@ -730,12 +813,21 @@ exports.getDashboardStats = async (req, res) => {
             }
         });
 
+        // Plan limits for the org
+        const planLimits = await getOrgPlanLimits(orgId);
+
         res.json({
             totalGroups, activeGroups,
             totalParticipants, activeParticipants,
             totalExams, activeExams, upcomingExams, completedExams,
             totalCategories, totalTopics, totalQuestions,
-            totalSuperUsers, activeSuperUsers
+            totalSuperUsers, activeSuperUsers,
+            limits: planLimits ? {
+                participant_limit: planLimits.participant_limit,
+                active_participant_limit: planLimits.active_participant_limit,
+                question_limit: planLimits.question_limit,
+                plan_name: planLimits.plan_name,
+            } : null
         });
     } catch (err) {
         console.error('getDashboardStats error:', err);

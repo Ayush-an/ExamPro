@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchFeedbacks } from "../../utils/api";
+import { fetchSuperUserFeedbacks } from "../../utils/api";
 import {
   MessageSquare,
   X,
@@ -90,7 +90,7 @@ export default function Feedbacks({ onClose }) {
                     <Shield size={10} className="text-indigo-400" />
                     <span className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Verified Signal</span>
                   </div>
-                  <button className="text-[9px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-600 transition flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="text-[9px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-600 transition flex items-center gap-1 opacity-0 group-hover:opacity-100">
                     Archive Signal <ChevronRight size={12} />
                   </button>
                 </div>

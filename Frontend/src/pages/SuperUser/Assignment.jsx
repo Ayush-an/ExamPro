@@ -1,4 +1,4 @@
-import { fetchSuperUserFeedbacks, uploadSuperUserAssignment } from "../../utils/api";
+import { fetchSuperUserGroups, uploadSuperUserAssignment } from "../../utils/api";
 import {
   FilePlus,
   Send,
@@ -154,7 +154,7 @@ export default function Assignments({ onClose }) {
 
         <div className="flex gap-4 pt-4 sticky bottom-0 bg-white py-4">
           <button type="button" onClick={onClose} className="px-8 py-5 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-100">Abort Mission</button>
-          <button type="submit" disabled={loading} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-indigo-50/50 flex items-center justify-center gap-3">
+          <button type="submit" disabled={loading} className="flex-1 px-8 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-indigo-50/50 flex items-center justify-center gap-3">
             <Send size={16} /> {loading ? 'Deploying...' : 'Deploy Mission'}
           </button>
         </div>

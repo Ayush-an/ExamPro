@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { fetchGroups, fetchExams, updateExam, deleteExam, fetchCategories, fetchTopics } from "../../../utils/api";
+import { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { fetchDashboardStats, fetchMyNotices, fetchGroups, fetchParticipants, fetchExams, fetchSuperUsersByOrg, fetchCategories, fetchTopics, deleteExam, updateExam } from "../../../utils/api";
 import { toast } from "react-hot-toast";
-import { Pencil, Trash2, Clock, Users, CalendarDays, X, CheckCircle2, ListFilter, Layers, Hash, Settings2 } from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, FileText, Send, MessageSquare, Newspaper, Plus, Search, CheckCircle2, Layers, Hash, Eye, Trash2, Edit, X, Calendar, Clock, AlertCircle, Pencil, CalendarDays, ListFilter, Settings2 } from "lucide-react";
 import QuestionMapping from "./QuestionMapping";
 
 const ManageExam = () => {
@@ -49,12 +51,19 @@ const ManageExam = () => {
   }, []);
 
   useEffect(() => {
-    if (editingExam?.category_id) {
-      fetchTopics(editingExam.category_id).then(setTopics).catch(e => console.error(e));
+    const activeCats = editingExam?.category_ids || [];
+    if (activeCats.length > 0) {
+      Promise.all(activeCats.map(id => fetchTopics(id)))
+        .then(results => {
+          const allTopics = results.flatMap(res => res || []);
+          const uniqueTopics = Array.from(new Map(allTopics.map(t => [t.id, t])).values());
+          setTopics(uniqueTopics);
+        })
+        .catch(e => console.error(e));
     } else {
       setTopics([]);
     }
-  }, [editingExam?.category_id]);
+  }, [editingExam?.category_ids]);
 
   const handleEditChange = (field, value) => {
     setEditingExam((prev) => ({ ...prev, [field]: value }));
@@ -66,12 +75,10 @@ const ManageExam = () => {
         title: editingExam.title,
         description: editingExam.description,
         duration_minutes: Number(editingExam.duration_minutes) || 0,
-        max_questions: Number(editingExam.max_questions) || 0,
-        max_marks: Number(editingExam.max_marks) || 0,
-        category_id: editingExam.category_id || null,
-        topic_id: editingExam.topic_id || null,
+        category_ids: editingExam.category_ids?.map(id => parseInt(id)) || [],
+        topic_ids: editingExam.topic_ids?.map(id => parseInt(id)) || [],
         status_code: editingExam.status_code || "ACTIVE",
-        groupIds: editingExam.selectedGroups?.map((id) => parseInt(id)) || [],
+        group_ids: editingExam.selectedGroups?.map((id) => parseInt(id)) || [],
       };
 
       if (editingExam.start_date) payload.start_date = localInputToIso(editingExam.start_date);
@@ -87,13 +94,13 @@ const ManageExam = () => {
   };
 
   const handleSoftDelete = async (id) => {
-    if (!window.confirm("Remove this exam?")) return;
     try {
+      if (!window.confirm("Move this exam to removed list?")) return;
       await deleteExam(id);
-      await fetchAllExams();
-      toast.success("Exam removed successfully!");
+      toast.success("Exam removed successfully.");
+      fetchAllExams();
     } catch (err) {
-      toast.error("Failed to remove exam.");
+      toast.error(err.response?.data?.error || "Failed to remove exam.");
     }
   };
 
@@ -123,7 +130,12 @@ const ManageExam = () => {
                   {exam.status_code}
                 </span>
                 <div className="flex gap-2">
-                  <button onClick={() => setEditingExam({ ...exam, selectedGroups: exam.Groups?.map(g => String(g.id)) || [] })} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition">
+                  <button onClick={() => setEditingExam({
+                    ...exam,
+                    selectedGroups: exam.Groups?.map(g => String(g.id)) || [],
+                    category_ids: exam.Categories?.map(c => String(c.id)) || [],
+                    topic_ids: exam.Topics?.map(t => String(t.id)) || []
+                  })} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition">
                     <Settings2 size={16} />
                   </button>
                   <button onClick={() => handleSoftDelete(exam.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition">
@@ -137,8 +149,8 @@ const ManageExam = () => {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="p-3 bg-slate-50 rounded-2xl">
-                  <div className="text-[10px] font-bold text-slate-400 tracking-widest mb-1">Questions</div>
-                  {/** Limit */} <div className="text-sm font-extrabold text-slate-700">{exam.max_questions || 0} </div>
+                  <div className="text-[10px] font-bold text-slate-400 tracking-widest mb-1">Total Question</div>
+                  <div className="text-sm font-extrabold text-slate-700">{exam.max_questions || 0} </div>
                 </div>
                 <div className="p-3 bg-indigo-50/50 rounded-2xl">
                   <div className="text-[10px] font-bold text-indigo-400 tracking-widest mb-1">Duration</div>
@@ -149,7 +161,11 @@ const ManageExam = () => {
               <div className="space-y-2 mb-8">
                 <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
                   <Layers size={14} className="text-slate-300" />
-                  <span>{exam.Category?.name || 'All Categories'}</span>
+                  <span className="truncate">{exam.Categories?.map(c => c.name).join(', ') || 'All Categories'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
+                  <Hash size={14} className="text-slate-300" />
+                  <span className="truncate">{exam.Topics?.map(t => t.name).join(', ') || 'All Topics'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
                   <Users size={14} className="text-slate-300" />
@@ -161,68 +177,148 @@ const ManageExam = () => {
                 onClick={() => setMappingExam(exam)}
                 className="w-full py-3.5 bg-slate-600 hover:bg-slate-800 text-white font-bold text-sm rounded-2xl transition shadow-lg shadow-slate-200 flex items-center justify-center gap-2"
               >
-                <ListFilter size={16} /> Question Assignment
+                <Eye size={16} /> View Question
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* EDIT MODAL */}
-      {editingExam && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-6">
-          <div className="bg-white rounded-[40px] p-10 w-full max-w-2xl shadow-2xl relative overflow-y-auto custom-scrollbar pt-10">
-            <button onClick={() => setEditingExam(null)} className="absolute top-8 right-8 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-              <X className="w-6 h-6" />
-            </button>
+      {/* EDIT MODAL - Portaled and Condensed */}
+      <Transition show={!!editingExam} as={Fragment}>
+        <Dialog as="div" className="relative z-60" onClose={() => setEditingExam(null)}>
+          <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          </Transition.Child>
 
-            <div className="mb-8">
-              <h3 className="text-2xl font-black text-blue-600">Exam Parameters</h3>
-              <p className="text-sm font-medium text-slate-500">Configure global limits and target categorization.</p>
-            </div>
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+                <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-[32px] bg-white p-8 text-left align-middle shadow-2xl transition-all border border-slate-50 relative">
+                  <button onClick={() => setEditingExam(null)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                    <X className="w-5 h-5" />
+                  </button>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Exam Title</label>
-                <input type="text" value={editingExam.title} onChange={e => handleEditChange("title", e.target.value)} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none" />
-              </div>
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-slate-800">Edit Exam Parameters</h3>
+                    <p className="text-xs font-medium text-slate-500">Update configuration for {editingExam?.title}</p>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Max Questions</label>
-                  <input type="number" value={editingExam.max_questions} onChange={e => handleEditChange("max_questions", e.target.value)} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Max Marks</label>
-                  <input type="number" value={editingExam.max_marks} onChange={e => handleEditChange("max_marks", e.target.value)} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold outline-none" />
-                </div>
-              </div>
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 tracking-widest mb-1.5 ml-1">Exam Title</label>
+                      <input
+                        type="text"
+                        value={editingExam?.title || ""}
+                        onChange={e => handleEditChange("title", e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-sm"
+                      />
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category Filter</label>
-                  <select value={editingExam.category_id || ""} onChange={e => handleEditChange("category_id", e.target.value)} className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 outline-none">
-                    <option value="">All Categories</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Topic Filter</label>
-                  <select value={editingExam.topic_id || ""} onChange={e => handleEditChange("topic_id", e.target.value)} disabled={!editingExam.category_id} className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 outline-none disabled:opacity-50">
-                    <option value="">All Topics</option>
-                    {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                </div>
-              </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <label className="block text-[10px] font-bold text-slate-400 tracking-widest mb-0.5">Assigned Questions</label>
+                        <div className="text-base font-black text-slate-800">{editingExam?.max_questions || 0}</div>
+                      </div>
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <label className="block text-[10px] font-bold text-slate-400 tracking-widest mb-0.5">Total Marks</label>
+                        <div className="text-base font-black text-slate-800">{editingExam?.max_marks || 0}</div>
+                      </div>
+                    </div>
 
-              <div className="flex justify-end gap-3 pt-8 border-t border-slate-100">
-                <button onClick={() => setEditingExam(null)} className="px-8 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-sm hover:bg-slate-100 transition">Cancel</button>
-                <button onClick={handleSaveEdit} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition">Update Settings</button>
-              </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-slate-400 tracking-widest ml-1">Categories</label>
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 border border-slate-100 rounded-xl bg-slate-50/50">
+                          {categories.map(c => {
+                            const isSelected = editingExam?.category_ids?.includes(String(c.id));
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  const current = editingExam.category_ids || [];
+                                  const next = isSelected ? current.filter(id => id !== String(c.id)) : [...current, String(c.id)];
+                                  handleEditChange("category_ids", next);
+                                }}
+                                className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all border ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300'}`}
+                              >
+                                {c.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-slate-400 tracking-widest ml-1">Topics</label>
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 border border-slate-100 rounded-xl bg-slate-50/50">
+                          {topics.length > 0 ? topics.map(t => {
+                            const isSelected = editingExam?.topic_ids?.includes(String(t.id));
+                            return (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => {
+                                  const current = editingExam.topic_ids || [];
+                                  const next = isSelected ? current.filter(id => id !== String(t.id)) : [...current, String(t.id)];
+                                  handleEditChange("topic_ids", next);
+                                }}
+                                className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all border ${isSelected ? 'bg-amber-500 border-amber-500 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-amber-300'}`}
+                              >
+                                {t.name}
+                              </button>
+                            );
+                          }) : <p className="text-[10px] text-slate-400 italic p-1">Select category first</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-slate-400 tracking-widest ml-1">Assign to Groups</label>
+                      <div className="grid grid-cols-2 gap-2 p-2 border border-slate-100 rounded-xl bg-slate-50/50 max-h-24 overflow-y-auto">
+                        {groups.map(g => {
+                          const isSelected = editingExam?.selectedGroups?.includes(String(g.id));
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => {
+                                const current = editingExam.selectedGroups || [];
+                                const next = isSelected ? current.filter(id => id !== String(g.id)) : [...current, String(g.id)];
+                                handleEditChange("selectedGroups", next);
+                              }}
+                              className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300'}`}
+                            >
+                              <span className="truncate">{g.name}</span>
+                              {isSelected && <CheckCircle2 size={10} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                      <button
+                        onClick={() => setEditingExam(null)}
+                        className="px-6 py-2.5 bg-slate-50 text-slate-500 rounded-xl font-bold text-xs hover:bg-slate-100 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
             </div>
           </div>
-        </div>
-      )}
+        </Dialog>
+      </Transition>
 
       {/* QUESTION MAPPING OVERLAY */}
       {mappingExam && (

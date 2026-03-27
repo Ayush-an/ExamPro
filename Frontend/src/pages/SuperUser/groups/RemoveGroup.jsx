@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchRemovedGroups } from '../../../utils/api';
-import {
-  Trash2,
-  Layers,
-  ChevronRight,
-  Calendar,
-  Clock,
-  UserCircle2,
-  Search,
-  History,
-  Download,
-  Database,
-  Shield,
-  X,
-  Plus
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Calendar, Clock, Search, History, Download, Shield, } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "react-hot-toast";
 
@@ -94,11 +79,11 @@ const RemoveGroup = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sr.</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Archived Unit</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Timeline</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Archival Trace</th>
-              <th className="px-8 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Status</th>
+              <th className="px-8 py-6 text-[14px] font-bold text-slate-600 tracking-widest">Sr.</th>
+              <th className="px-8 py-6 text-[14px] font-bold text-slate-600 tracking-widest">Archived Unit</th>
+              <th className="px-8 py-6 text-[14px] font-bold text-slate-600 tracking-widest">Timeline</th>
+              <th className="px-8 py-6 text-[14px] font-bold text-slate-600 tracking-widest">Archival Trace</th>
+              <th className="px-8 py-6 text-[14px] font-bold text-slate-600 tracking-widest text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -124,7 +109,7 @@ const RemoveGroup = () => {
               filteredGroups.map((g, i) => (
                 <tr key={g.id} className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-6">
-                    <span className="text-[10px] font-black text-slate-200">{i + 1}</span>
+                    <span className="text-[10px] font-black text-slate-800">{i + 1}</span>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">

@@ -9,7 +9,7 @@ import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 import { Search, Download, FileQuestion, Trash2, Pencil, Filter, Layers, Hash } from "lucide-react";
 
-const ManageQuestion = () => {
+const ManageQuestion = ({ onEdit }) => {
   const [exams, setExams] = useState([]);
   const [categories, setCategories] = useState([]);
   const [topics, setTopics] = useState([]);
@@ -69,12 +69,12 @@ const ManageQuestion = () => {
       Category: q.Category?.name || 'N/A',
       Topic: q.Topic?.name || 'N/A',
       Question: q.question_text,
-      Option1: q.options?.[0]?.text || '',
-      Option2: q.options?.[1]?.text || '',
-      Option3: q.options?.[2]?.text || '',
-      Option4: q.options?.[3]?.text || '',
-      Option5: q.options?.[4]?.text || '',
-      Correct: q.options?.find(o => o.is_correct)?.text || 'N/A',
+      Option1: (q.QuestionOptions || q.options)?.[0]?.option_text || (q.QuestionOptions || q.options)?.[0]?.text || '',
+      Option2: (q.QuestionOptions || q.options)?.[1]?.option_text || (q.QuestionOptions || q.options)?.[1]?.text || '',
+      Option3: (q.QuestionOptions || q.options)?.[2]?.option_text || (q.QuestionOptions || q.options)?.[2]?.text || '',
+      Option4: (q.QuestionOptions || q.options)?.[3]?.option_text || (q.QuestionOptions || q.options)?.[3]?.text || '',
+      Option5: (q.QuestionOptions || q.options)?.[4]?.option_text || (q.QuestionOptions || q.options)?.[4]?.text || '',
+      Correct: (q.QuestionOptions || q.options)?.find(o => o.is_correct)?.option_text || (q.QuestionOptions || q.options)?.find(o => o.is_correct)?.text || 'N/A',
       Difficulty: q.difficulty_code,
       Marks: q.QuestionExams?.[0]?.marks || 'N/A' // Reference marks if in context of exam
     }));
@@ -118,7 +118,7 @@ const ManageQuestion = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">View Mode / Exam</label>
+            <label className="text-[14px] font-bold text-slate-400 tracking-widest ml-1">View Mode / Exam</label>
             <select
               value={examId}
               onChange={(e) => {
@@ -135,7 +135,7 @@ const ManageQuestion = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
+            <label className="text-[14px] font-bold text-slate-400 tracking-widest ml-1">Category</label>
             <select
               disabled={examId !== ""}
               value={categoryId}
@@ -148,7 +148,7 @@ const ManageQuestion = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Topic</label>
+            <label className="text-[14px] font-bold text-slate-400 tracking-widest ml-1">Topic</label>
             <select
               disabled={examId !== "" || !categoryId}
               value={topicId}
@@ -187,11 +187,11 @@ const ManageQuestion = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-[0.2em] text-center w-12">#</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-[0.2em]">Question</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-[0.2em]">Options</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-[0.2em]">Hierarchy & Difficulty</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-[0.2em] text-right">Actions</th>
+                <th className="px-6 py-4 text-[14px] font-bold text-slate-600 tracking-[0.2em] text-center w-12">#</th>
+                <th className="px-6 py-4 text-[14px] font-bold text-slate-600 tracking-[0.2em]">Question</th>
+                <th className="px-6 py-4 text-[14px] font-bold text-slate-600 tracking-[0.2em]">Options</th>
+                <th className="px-6 py-4 text-[14px] font-bold text-slate-600 tracking-[0.2em]">Hierarchy & Difficulty</th>
+                <th className="px-6 py-4 text-[14px] font-bold text-slate-600 tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
 
@@ -219,10 +219,10 @@ const ManageQuestion = () => {
 
                     <td className="px-6 py-6 vertical-top min-w-[200px]">
                       <div className="space-y-1.5">
-                        {q.options?.map((opt, idx) => (
+                        {(q.QuestionOptions || q.options)?.map((opt, idx) => (
                           <div key={idx} className={`text-[11px] px-2 py-1 rounded flex items-center gap-2 ${opt.is_correct ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-500'}`}>
                             <span className="opacity-40">{String.fromCharCode(65 + idx)}</span>
-                            {opt.text}
+                            {opt.option_text || opt.text}
                           </div>
                         ))}
                       </div>
@@ -239,7 +239,7 @@ const ManageQuestion = () => {
                           </span>
                         </div>
                         <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${q.difficulty_code === "EASY" ? "bg-emerald-100 text-emerald-700" :
-                            q.difficulty_code === "HARD" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+                          q.difficulty_code === "HARD" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
                           }`}>
                           {q.difficulty_code}
                         </span>
@@ -248,7 +248,7 @@ const ManageQuestion = () => {
 
                     <td className="px-6 py-6 text-right vertical-top">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => navigate(`/questions/edit/${q.id}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+                        <button onClick={() => onEdit ? onEdit(q.id) : navigate(`/admin/questions/edit/${q.id}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
                           <Pencil size={14} />
                         </button>
                         <button onClick={() => handleDelete(q.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition">

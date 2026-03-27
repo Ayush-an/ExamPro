@@ -1,16 +1,6 @@
 import { fetchSuperUserGroups, createSuperUserExam } from "../../../utils/api.js";
 import {
-  Plus,
-  FileText,
-  Clock,
-  Layers,
-  Calendar,
-  Shield,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  Timer,
-  ChevronRight,
+  Plus, FileText, Clock, Layers, Calendar, Shield, X, CheckCircle2, AlertCircle, Timer, ChevronRight,
   Send
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

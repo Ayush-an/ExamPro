@@ -41,7 +41,7 @@ const QuestionMapping = ({ exam, onClose }) => {
     try {
       setLoadingExam(true);
       const res = await fetchQuestionsByExam(exam.id);
-      setExamQuestions(res.data || []);
+      setExamQuestions(res.data || res || []);
     } catch {
       toast.error("Failed to load exam questions");
     } finally {
@@ -58,7 +58,7 @@ const QuestionMapping = ({ exam, onClose }) => {
       });
       // Filter out those already in the exam
       const inExamIds = new Set(examQuestions.map(q => q.id));
-      const pool = (res.data || []).filter(q => !inExamIds.has(q.id));
+      const pool = (res.data || res || []).filter(q => !inExamIds.has(q.id));
       setAvailableQuestions(pool);
     } catch {
       toast.error("Failed to load question pool");
@@ -124,7 +124,7 @@ const QuestionMapping = ({ exam, onClose }) => {
                 <Layers size={24} />
              </div>
              <div>
-                <h2 className="text-xl font-black text-slate-900 leading-tight">Exam Question Mapping</h2>
+                <h2 className="text-xl font-black text-slate-900 leading-tight">View Questions</h2>
                 <div className="flex items-center gap-3 mt-1">
                    <span className="text-sm font-bold text-slate-400 truncate max-w-[300px]">{exam.title}</span>
                    <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
@@ -167,10 +167,20 @@ const QuestionMapping = ({ exam, onClose }) => {
                         <div key={q.id} className="group p-5 bg-white border border-slate-100 rounded-3xl hover:border-rose-200 hover:shadow-lg hover:shadow-rose-50/50 transition-all cursor-default">
                            <div className="flex justify-between items-start gap-4">
                               <div className="flex-1">
-                                 <div className="text-sm font-bold text-slate-800 leading-snug line-clamp-2">{q.question_text}</div>
+                                 <div className="text-sm font-bold text-slate-800 leading-snug">{q.question_text}</div>
                                  <div className="flex items-center gap-3 mt-3">
                                     <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black">{q.marks} Marks</span>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{q.difficulty_code}</span>
+                                 </div>
+                                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {(q.QuestionOptions || q.options || []).map((opt, idx) => (
+                                       <div key={idx} className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-[10px] font-bold transition-all ${opt.is_correct ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm ring-1 ring-emerald-100' : 'bg-slate-50/50 border-slate-100 text-slate-500'}`}>
+                                          <div className={`w-5 h-5 shrink-0 rounded-lg flex items-center justify-center text-[9px] font-black ${opt.is_correct ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                             {String.fromCharCode(65 + idx)}
+                                          </div>
+                                          <span className="truncate">{opt.option_text || opt.text}</span>
+                                       </div>
+                                    ))}
                                  </div>
                               </div>
                               <button 
@@ -234,13 +244,23 @@ const QuestionMapping = ({ exam, onClose }) => {
                                        <Hash size={10}/> {q.Topic?.name || 'GEN'}
                                     </span>
                                  </div>
-                                 <div className="text-sm font-bold text-slate-800 leading-snug line-clamp-2">{q.question_text}</div>
+                                 <div className="text-sm font-bold text-slate-800 leading-snug">{q.question_text}</div>
                                  <div className="flex items-center gap-3 mt-3">
                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
                                         q.difficulty_code === 'EASY' ? 'bg-emerald-50 text-emerald-600' : 
                                         q.difficulty_code === 'HARD' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
                                     }`}>{q.difficulty_code}</span>
                                     {q.Category && <span className="text-[10px] font-bold text-slate-400">In {q.Category.name}</span>}
+                                 </div>
+                                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {(q.QuestionOptions || q.options || []).map((opt, idx) => (
+                                       <div key={idx} className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-[10px] font-bold transition-all ${opt.is_correct ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm ring-1 ring-emerald-100' : 'bg-slate-50/50 border-slate-100 text-slate-500'}`}>
+                                          <div className={`w-5 h-5 shrink-0 rounded-lg flex items-center justify-center text-[9px] font-black ${opt.is_correct ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                             {String.fromCharCode(65 + idx)}
+                                          </div>
+                                          <span className="truncate">{opt.option_text || opt.text}</span>
+                                       </div>
+                                    ))}
                                  </div>
                               </div>
                               <button 

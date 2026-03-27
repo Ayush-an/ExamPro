@@ -59,14 +59,70 @@ export const createAdmin = async (payload) => {
     return res.data;
 };
 
+// ─── SUPERADMIN PROFILE ──────────────────────────────────────────────────────
+export const fetchSuperAdminProfile = async () => {
+    const res = await api.get('/superadmin/profile');
+    return res.data;
+};
+
+export const updateSuperAdminProfile = async (payload) => {
+    const res = await api.put('/superadmin/profile', payload);
+    return res.data;
+};
+
+export const updateSuperAdminPassword = async (payload) => {
+    const res = await api.put('/superadmin/profile/password', payload);
+    return res.data;
+};
+
+export const uploadSuperAdminPhoto = async (file) => {
+    const fd = new FormData();
+    fd.append('photo', file);
+    const res = await api.post('/superadmin/profile/photo', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
+};
+
 // ─── ORGANIZATIONS ────────────────────────────────────────────────────────────
 export const fetchOrganizations = async () => {
     const res = await api.get('/superadmin/organizations');
     return res.data;
 };
 
+export const fetchOrganizationDetails = async (id) => {
+    const res = await api.get(`/superadmin/organizations/${id}`);
+    return res.data;
+};
+
+// ─── COUPONS ──────────────────────────────────────────────────────────────────
+export const fetchCoupons = async () => {
+    const res = await api.get('/superadmin/coupons');
+    return res.data;
+};
+
+export const createCoupon = async (payload) => {
+    const res = await api.post('/superadmin/coupons', payload);
+    return res.data;
+};
+
+export const updateCoupon = async (id, payload) => {
+    const res = await api.put(`/superadmin/coupons/${id}`, payload);
+    return res.data;
+};
+
+export const deleteCoupon = async (id) => {
+    const res = await api.delete(`/superadmin/coupons/${id}`);
+    return res.data;
+};
+
 export const fetchPlans = async () => {
     const res = await api.get('/public/plans');
+    return res.data;
+};
+
+export const verifyCoupon = async (coupon_code, plan_id) => {
+    const res = await api.post('/public/verify-coupon', { coupon_code, plan_id });
     return res.data;
 };
 
@@ -96,15 +152,9 @@ export const updateExam = async (examId, data) => {
     return res.data;
 };
 
-export const deleteExam = async (examId) => {
-    const res = await api.delete(`/exam/${examId}`);
-    return res.data;
-};
-
-export const fetchRemovedExams = async () => {
-    const res = await api.get('/exam/removed/list');
-    return res.data;
-};
+export const deleteExam = (id) => api.delete(`/exam/${id}`).then(res => res.data);
+export const restoreExam = (id) => api.post(`/exam/${id}/restore`).then(res => res.data);
+export const fetchRemovedExams = () => api.get('/exam/removed/list').then(res => res.data);
 
 export const fetchParticipantExams = async () => {
     const res = await api.get('/participant/exams');
@@ -264,6 +314,16 @@ export const uploadQuestionExcel = async (file) => {
 
 export const deleteQuestion = async (id) => {
     const res = await api.delete(`/question/${id}`);
+    return res.data;
+};
+
+export const fetchQuestionById = async (id) => {
+    const res = await api.get(`/question/${id}`);
+    return res.data;
+};
+
+export const updateQuestion = async (id, payload) => {
+    const res = await api.put(`/question/${id}`, payload);
     return res.data;
 };
 
